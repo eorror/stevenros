@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steven Ros</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@800&family=Archivo+Black&family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        @font-face {
+            font-family: 'Bootzy TM';
+            src: url('fonts/BootzyTM.woff2') format('woff2'),
+                 url('fonts/BootzyTM.woff') format('woff');
+            font-weight: normal; font-style: normal; font-display: swap;
+        }
+    </style>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body { width: 100%; height: 100%; overflow: hidden; background: #FAFAF8; }
+
+        /* GRAIN */
+        #grain {
+            position: fixed; inset: 0; z-index: 60; pointer-events: none;
+            mix-blend-mode: overlay; opacity: 0.78;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)'/%3E%3C/svg%3E");
+            background-size: 160px 160px; background-repeat: repeat;
+        }
+
+        /* NAV */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+            padding: 24px 44px; display: flex; justify-content: space-between; align-items: center;
+            opacity: 0; transition: opacity 0.7s ease;
+        }
+        .logo { font-family: 'Archivo Black', sans-serif; font-size: 1.75rem; color: #CC1111; text-decoration: none; letter-spacing: -0.04em; line-height: 1; transition: opacity 0.2s; }
+        .logo:hover { opacity: 0.8; }
+        .nav-links { list-style: none; display: flex; gap: 36px; align-items: center; }
+        .nav-links a { font-family: 'Inter', sans-serif; font-size: 0.74rem; font-weight: 400; letter-spacing: 0.10em; text-transform: uppercase; color: #1C1814; text-decoration: none; opacity: 0.52; transition: opacity 0.22s ease; }
+        .nav-links a:hover { opacity: 1; }
+        .nav-social { display: flex; gap: 20px; align-items: center; }
+        .nav-social a { display: flex; align-items: center; color: #1C1814; opacity: 0.45; transition: opacity 0.22s; text-decoration: none; }
+        .nav-social a:hover { opacity: 1; }
+        .nav-social svg { width: 17px; height: 17px; }
+
+        /* NAME — top */
+        .name-wrap {
+            position: fixed; top: 92px; left: 50%;
+            transform: translateX(-50%); z-index: 150;
+            pointer-events: none; text-align: center;
+        }
+        .name {
+            font-family: 'Bootzy TM', 'Syne', sans-serif;
+            font-size: clamp(2rem, 5.5vw, 4.4rem);
+            font-weight: normal; color: #CC1111; letter-spacing: -0.01em;
+            white-space: nowrap; user-select: none; line-height: 1; text-transform: uppercase;
+            opacity: 0; transition: opacity 0.6s ease;
+            text-shadow: 0 0 18px rgba(204,17,17,0.45), 0 0 40px rgba(204,17,17,0.22);
+        }
+
+        /* HERO + STAGE */
+        .hero { position: relative; z-index: 10; width: 100vw; height: 100vh; }
+        #stage { position: fixed; inset: 0; z-index: 10; transform-origin: 50% 50%; will-change: transform; }
+
+        .card {
+            position: absolute; left: 50%; top: 50%;
+            width: 680px; height: 416px;
+            will-change: transform, opacity; cursor: pointer;
+        }
+        .card-inner {
+            width: 100%; height: 100%; border-radius: 0; overflow: hidden;
+            background: #111; box-shadow: 0 24px 64px rgba(0,0,0,0.28); will-change: filter;
+        }
+        .card video { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+
+        /* TITLE + DATE of centred clip */
+        .clip-title {
+            position: fixed; left: 50%; transform: translateX(-50%);
+            z-index: 150; pointer-events: none; text-align: center; white-space: nowrap;
+            font-family: 'Inter', sans-serif; opacity: 0; transition: opacity 0.3s ease;
+        }
+        .clip-title .ct-name { display: block; font-size: 0.82rem; font-weight: 400; letter-spacing: 0.18em; text-transform: uppercase; color: #1C1814; }
+        .clip-title .ct-date { display: block; margin-top: 7px; font-size: 0.66rem; font-weight: 300; letter-spacing: 0.16em; text-transform: uppercase; color: #1C1814; opacity: 0.45; }
+
+        /* PAGE TRANSITION OUT (Home → Work) */
+        #wipe {
+            position: fixed; inset: 0; background: #FFFFFF;
+            z-index: 500; opacity: 0; pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+        #wipe.show { opacity: 1; pointer-events: all; }
+    </style>
+</head>
+<body>
+
+<div id="grain"></div>
+
+<nav>
+    <a href="index.html" class="logo">SR</a>
+    <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="work.html">Work</a></li>
+        <li><a href="contact.html">Contact</a></li>
+    </ul>
+    <div class="nav-social">
+        <a href="https://instagram.com/stevennros" target="_blank" aria-label="Instagram">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+        </a>
+        <a href="https://linkedin.com/in/stevennros" target="_blank" aria-label="LinkedIn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+        </a>
+        <a href="mailto:stevenros65@gmail.com" aria-label="Email">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        </a>
+    </div>
+</nav>
+
+<div class="name-wrap">
+    <h1 class="name" id="name">Steven Ros</h1>
+</div>
+
+<main class="hero">
+    <div id="stage"></div>
+    <div class="clip-title" id="clipTitle"></div>
+</main>
+
+<div id="wipe"></div>
+
+<script>
+/* ── GRAIN ── */
+const grain = document.getElementById('grain');
+setInterval(() => { grain.style.backgroundPosition = (Math.random()*200|0)+'px '+(Math.random()*200|0)+'px'; }, 80);
+
+/* ── VIDEO CAROUSEL ── */
+(function carousel(){
+
+    const VIDEOS = [
+        'work/reel one v4.mp4','work/halloween v5.mp4','work/esports v2.mp4','work/pln v1.mp4',
+        'work/ESA V TANSA V1.MP4','work/grog reel v4 28.02.25.mp4','work/infinity sleep v3 .mp4',
+        'work/video 1 v7.mp4','work/raided v7 08.04.2025.mp4','work/spinning v2.mp4',
+        'work/logos card v2.mp4','work/reel 3 v3.mp4','work/ESA V TANSA V4 26.03.2025.mp4',
+        'work/FINAL FINAL fallen angels 2.mp4','work/cocktail night after reel chinese.mp4',
+        'work/fully done.mp4','work/raided nz finished.mp4','work/song test.mp4',
+        'work/v6772.mp4','work/video 2 v2 .mp4','work/web3 v1.mp4',
+    ];
+    const TITLES = [
+        'Reel One','Halloween','Esports','PLN','ESA vs TANSA','Grog Reel','Infinity Sleep',
+        'Video 1','Raided','Spinning','Logos','Reel 3','ESA vs TANSA','Fallen Angels',
+        'Cocktail Night','Fully Done','Raided NZ','Song Test','V6772','Video 2','Web3',
+    ];
+    const DATES = [
+        'May 2025','Sep 2025','May 2026','Feb 2026','Mar 2026','Feb 2025','Apr 2025',
+        'Aug 2025','Apr 2025','Feb 2026','Mar 2026','May 2025','Mar 2025','Aug 2024',
+        'Sep 2024','Sep 2024','Sep 2024','Mar 2026','Feb 2026','Aug 2025','Sep 2024',
+    ];
+
+    const N         = VIDEOS.length;
+    const CARD_W    = 680;
+    const CARD_H    = 416;
+    const SPACING   = 610;
+    const SIDE_SCALE= 0.82;
+    const SIDE_DIM  = 0.42;
+    const VISIBLE   = 3;
+    const EAGER     = 8;
+    const CUT_MS    = 750;
+    const MIN_CUTS  = 5, MAX_CUTS = 8;
+    const ZOOM_MS   = 2800;
+    const START_BOOST = 1.7;
+    function fillZoom(){ return Math.max(innerWidth / CARD_W, innerHeight / CARD_H) * 1.08 * START_BOOST; }
+
+    const stage     = document.getElementById('stage');
+    const nameEl    = document.getElementById('name');
+    const nav       = document.querySelector('nav');
+    const clipTitle = document.getElementById('clipTitle');
+    clipTitle.style.top = `calc(50% + ${CARD_H / 2 + 30}px)`;
+
+    let lastActive = -1;
+    function setTitle(i){
+        if (i === lastActive) return;
+        lastActive = i;
+        clipTitle.innerHTML =
+            `<span class="ct-name">${TITLES[i] || ''}</span>` +
+            `<span class="ct-date">${DATES[i] || ''}</span>`;
+        clipTitle.style.opacity = '1';
+    }
+
+    /* Build cards */
+    const cards = VIDEOS.map((src, i) => {
+        const outer = document.createElement('div');
+        outer.className = 'card';
+        outer.style.opacity = '0';
+
+        const inner = document.createElement('div');
+        inner.className = 'card-inner';
+
+        const vid = document.createElement('video');
+        vid.dataset.src = src;
+        vid.preload = 'auto';
+        vid.loop = true;
+        vid.muted = true;
+        vid.defaultMuted = true;
+        vid.playsInline = true;
+        vid.setAttribute('muted', '');
+        vid.setAttribute('playsinline', '');
+        vid.setAttribute('webkit-playsinline', '');
+
+        inner.appendChild(vid);
+        outer.appendChild(inner);
+        stage.appendChild(outer);
+        return { outer, inner, vid, loaded: false };
+    });
+
+    function loadCard(i){
+        const c = cards[i];
+        if (c.loaded) return;
+        c.loaded = true;
+        const v = c.vid;
+        const tryPlay = () => { const p = v.play(); if (p) p.catch(()=>{}); };
+        v.addEventListener('loadeddata', tryPlay);
+        v.addEventListener('canplay', tryPlay);
+        v.src = v.dataset.src;
+        v.load();
+        tryPlay();
+    }
+
+    /* Staggered eager load */
+    loadCard(0);
+    for (let i = 1; i < EAGER; i++) setTimeout(() => loadCard(i), i * 300);
+
+    /* State */
+    let phase      = 'intro';
+    let pos        = 0;
+    let posTarget  = 0;
+    let stageScale = fillZoom();
+    let zoomFrom   = stageScale;
+    let zoomT0     = 0;
+    let zoomDur    = ZOOM_MS;
+    let zooming    = false;
+    let exiting    = false;
+    function ease(t){ return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3)/2; }
+
+    function delta(i){
+        let d = i - pos;
+        d = ((d % N) + N) % N;
+        if (d > N / 2) d -= N;
+        return d;
+    }
+
+    function place(){
+        cards.forEach((c, i) => {
+            const d  = delta(i);
+            const ad = Math.abs(d);
+            const x  = d * SPACING;
+            let scale  = 1 - (1 - SIDE_SCALE) * Math.min(ad, 1);
+            if (ad < 0.5) scale *= stageScale;     /* intro zoom — centre clip only */
+            const bright = 1 - (1 - SIDE_DIM) * Math.min(ad, 1);
+            const visible = ad <= VISIBLE + 0.5;
+
+            c.outer.style.transform = `translate(-50%,-50%) translateX(${x.toFixed(1)}px) scale(${scale.toFixed(3)})`;
+            c.outer.style.opacity   = visible ? '1' : '0';
+            c.outer.style.zIndex    = String(Math.round(100 - ad * 10));
+            c.inner.style.filter    = `brightness(${bright.toFixed(3)})`;
+
+            if (c.loaded) {
+                if (visible && c.vid.paused)        c.vid.play().catch(()=>{});
+                else if (!visible && !c.vid.paused) c.vid.pause();
+            }
+        });
+    }
+
+    /* MAIN LOOP */
+    (function frame(ts){
+        if (!exiting) {
+            const now = ts || performance.now();
+            if (zooming) {
+                const t = Math.min((now - zoomT0) / zoomDur, 1);
+                stageScale = zoomFrom + (1 - zoomFrom) * ease(t);
+                if (t >= 1) zooming = false;
+            }
+            if (phase === 'live') {
+                pos += (posTarget - pos) * 0.12;
+                setTitle(((Math.round(pos) % N) + N) % N);
+            }
+            place();
+        }
+        requestAnimationFrame(frame);
+    })();
+
+    /* INTRO MONTAGE */
+    function shuffle(arr){
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+
+    function finishIntro(){
+        phase = 'live';
+        posTarget = pos;
+        for (let i = EAGER; i < N; i++) setTimeout(() => loadCard(i), (i - EAGER) * 180);
+    }
+
+    let started = false;
+    function beginMontage(){
+        if (started) return;
+        started = true;
+        stageScale = fillZoom();
+
+        const order = shuffle([...Array(EAGER).keys()]);
+        const want  = MIN_CUTS + Math.floor(Math.random() * (MAX_CUTS - MIN_CUTS + 1));
+        const totalCuts = Math.min(want, order.length);
+        const montageMs = totalCuts * CUT_MS;
+
+        zoomFrom = stageScale;
+        zoomT0   = performance.now();
+        zoomDur  = montageMs;
+        zooming  = true;
+
+        setTimeout(() => { nameEl.style.opacity = '1'; nav.style.opacity = '1'; }, montageMs * 0.5);
+
+        let cuts = 0;
+        pos = posTarget = order[0];
+        const timer = setInterval(() => {
+            cuts++;
+            if (cuts >= totalCuts) { clearInterval(timer); finishIntro(); return; }
+            pos = posTarget = order[cuts];
+        }, CUT_MS);
+    }
+
+    cards[0].vid.addEventListener('canplay', beginMontage, { once: true });
+    setTimeout(beginMontage, 1800);
+
+    /* SCROLL — step one clip at a time (a clip is always centred) */
+    const STEP = 110;
+    let scrollAcc = 0;
+    window.addEventListener('wheel', e => {
+        if (phase !== 'live') return;
+        scrollAcc += e.deltaY;
+        while (scrollAcc >=  STEP) { posTarget += 1; scrollAcc -= STEP; }
+        while (scrollAcc <= -STEP) { posTarget -= 1; scrollAcc += STEP; }
+    }, { passive: true });
+
+    let lastTY = null;
+    window.addEventListener('touchstart', e => { lastTY = e.touches[0].clientY; }, { passive: true });
+    window.addEventListener('touchmove', e => {
+        if (phase !== 'live' || lastTY === null) return;
+        scrollAcc += (lastTY - e.touches[0].clientY) * 2.2;
+        while (scrollAcc >=  STEP) { posTarget += 1; scrollAcc -= STEP; }
+        while (scrollAcc <= -STEP) { posTarget -= 1; scrollAcc += STEP; }
+        lastTY = e.touches[0].clientY;
+    }, { passive: true });
+
+    /* Click a side clip to bring it to centre */
+    cards.forEach((c, i) => {
+        c.outer.addEventListener('click', () => {
+            if (phase !== 'live') return;
+            posTarget = pos + delta(i);
+        });
+    });
+
+    /* ── PAGE TRANSITION OUT — blocks fly into 3 clusters, then wipe to Work ── */
+    const wipe = document.getElementById('wipe');
+    document.querySelectorAll('nav a[href="work.html"]').forEach(a => {
+        a.addEventListener('click', e => {
+            e.preventDefault();
+            exiting = true;                          /* stop the carousel loop overwriting transforms */
+            const cx = innerWidth / 2;
+            const clusters = [cx - innerWidth * 0.26, cx, cx + innerWidth * 0.26];
+            cards.forEach((c, i) => {
+                const dx = clusters[i % 3] - cx;
+                c.outer.style.transition = 'transform 0.55s cubic-bezier(.6,0,.3,1), opacity 0.5s ease';
+                c.outer.style.transform  = `translate(-50%,-50%) translate(${dx.toFixed(0)}px, 0px) scale(0.06)`;
+                c.outer.style.opacity    = '0';
+            });
+            nameEl.style.opacity = '0';
+            clipTitle.style.opacity = '0';
+            nav.style.opacity = '0';
+            wipe.classList.add('show');
+            setTimeout(() => { location.href = a.getAttribute('href'); }, 600);
+        });
+    });
+
+})();
+</script>
+</body>
+</html>

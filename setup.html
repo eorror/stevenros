@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work Setup — Steven Ros</title>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            background: #F3EDE2;
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+        }
+
+        header {
+            padding: 52px 52px 32px;
+            border-bottom: 1px solid rgba(28,24,20,0.10);
+            display: flex;
+            align-items: baseline;
+            gap: 16px;
+        }
+
+        header h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.2rem;
+            font-weight: 400;
+            color: #1C1814;
+            letter-spacing: -0.015em;
+        }
+
+        header p {
+            font-size: 0.78rem;
+            color: #1C1814;
+            opacity: 0.45;
+            letter-spacing: 0.04em;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 52px 120px;
+        }
+
+        .instructions {
+            background: rgba(108,78,212,0.07);
+            border: 1px solid rgba(108,78,212,0.18);
+            border-radius: 8px;
+            padding: 18px 22px;
+            margin-bottom: 36px;
+            font-size: 0.8rem;
+            color: #1C1814;
+            opacity: 0.8;
+            line-height: 1.6;
+        }
+
+        .instructions strong { opacity: 1; font-weight: 600; }
+
+        /* ---- Video Row ---- */
+        .video-row {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            gap: 24px;
+            padding: 28px 0;
+            border-bottom: 1px solid rgba(28,24,20,0.08);
+            align-items: start;
+            transition: opacity 0.2s;
+        }
+
+        .video-row.excluded {
+            opacity: 0.35;
+        }
+
+        .video-preview {
+            position: relative;
+            aspect-ratio: 16/9;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #1C1814;
+        }
+
+        .video-preview video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .video-preview .play-hint {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.3);
+            transition: opacity 0.2s;
+            pointer-events: none;
+        }
+        .video-preview:hover .play-hint { opacity: 0; }
+
+        .play-hint svg {
+            width: 36px; height: 36px;
+            fill: rgba(255,255,255,0.7);
+        }
+
+        video {
+            cursor: pointer;
+        }
+
+        /* ---- Form Fields ---- */
+        .form-fields {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .field-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1;
+        }
+
+        .field.field-sm { flex: 0 0 90px; }
+        .field.field-cat { flex: 0 0 130px; }
+
+        label {
+            font-size: 0.65rem;
+            letter-spacing: 0.10em;
+            text-transform: uppercase;
+            color: #1C1814;
+            opacity: 0.45;
+            font-weight: 400;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.88rem;
+            color: #1C1814;
+            background: rgba(255,255,255,0.55);
+            border: 1px solid rgba(28,24,20,0.14);
+            border-radius: 6px;
+            padding: 10px 12px;
+            outline: none;
+            width: 100%;
+            transition: border-color 0.2s, background 0.2s;
+            -webkit-appearance: none;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        select:focus {
+            border-color: rgba(108,78,212,0.45);
+            background: #fff;
+        }
+
+        .filename {
+            font-size: 0.7rem;
+            color: #1C1814;
+            opacity: 0.30;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ---- Include Toggle ---- */
+        .include-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toggle {
+            position: relative;
+            width: 36px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+        .toggle input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            inset: 0;
+            background: rgba(28,24,20,0.15);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .slider::before {
+            content: '';
+            position: absolute;
+            width: 14px; height: 14px;
+            left: 3px; top: 3px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.2s;
+        }
+        .toggle input:checked + .slider { background: #6C4ED4; }
+        .toggle input:checked + .slider::before { transform: translateX(16px); }
+
+        .include-label {
+            font-size: 0.72rem;
+            color: #1C1814;
+            opacity: 0.50;
+            letter-spacing: 0.06em;
+        }
+
+        /* ---- Generate Button ---- */
+        .sticky-bottom {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: rgba(243,237,226,0.92);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(28,24,20,0.10);
+            padding: 20px 52px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 100;
+        }
+
+        .count-note {
+            font-size: 0.78rem;
+            color: #1C1814;
+            opacity: 0.45;
+        }
+        .count-note strong { opacity: 1; color: #1C1814; }
+
+        .generate-btn {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.78rem;
+            font-weight: 400;
+            letter-spacing: 0.10em;
+            text-transform: uppercase;
+            color: #F3EDE2;
+            background: #1C1814;
+            border: none;
+            border-radius: 8px;
+            padding: 14px 32px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.15s;
+        }
+        .generate-btn:hover { background: #2e2620; transform: translateY(-1px); }
+        .generate-btn:active { transform: translateY(0); }
+
+        .success-msg {
+            display: none;
+            font-size: 0.78rem;
+            color: #2a7a2a;
+            letter-spacing: 0.04em;
+        }
+        .success-msg.show { display: block; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Work Setup</h1>
+    <p>Fill in each video then generate work.html</p>
+</header>
+
+<div class="container">
+    <div class="instructions">
+        <strong>How it works:</strong> Preview each video, fill in the title, year, and category. Toggle off any you don't want to include. When you're done, click <strong>Generate work.html</strong> — it'll download a new file. Replace the old <code>work.html</code> with it.
+    </div>
+
+    <div id="video-list"></div>
+</div>
+
+<div class="sticky-bottom">
+    <span class="count-note">Including <strong id="included-count">0</strong> videos</span>
+    <span class="success-msg" id="success-msg">✓ work.html downloaded — replace your old file</span>
+    <button class="generate-btn" onclick="generate()">Generate work.html</button>
+</div>
+
+<script>
+const FILES = [
+    "ESA V TANSA V1.MP4",
+    "song test.mp4",
+    "logos card v2.mp4",
+    "pln v1.mp4",
+    "v6772.mp4",
+    "spinning v2.mp4",
+    "halloween v5.mp4",
+    "esports v2.mp4",
+    "web3 v1.mp4",
+    "video 2 v2 .mp4",
+    "video 1 v7.mp4",
+    "reel 3 v3.mp4",
+    "reel one v4.mp4",
+    "infinity sleep v3 .mp4",
+    "raided v7 08.04.2025.mp4",
+    "ESA V TANSA V4 26.03.2025.mp4",
+    "grog reel v4 28.02.25.mp4",
+    "fully done.mp4",
+    "raided nz finished.mp4",
+    "cocktail night after reel chinese.mp4",
+    "FINAL FINAL fallen angels 2.mp4"
+];
+
+const CATEGORIES = [
+    { value: "shorts", label: "Shorts" },
+    { value: "films",  label: "Films"  }
+];
+
+// Guess a default title from filename
+function guessTitle(filename) {
+    return filename
+        .replace(/\.[^.]+$/, '')       // remove extension
+        .replace(/v\d+(\s|$)/gi, ' ')  // remove version tags like v2, v4
+        .replace(/\d{2}\.\d{2}\.\d{4}/g, '') // remove dates
+        .replace(/[-_]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .split(' ')
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ');
+}
+
+function renderList() {
+    const list = document.getElementById('video-list');
+    list.innerHTML = '';
+
+    FILES.forEach((file, i) => {
+        const row = document.createElement('div');
+        row.className = 'video-row';
+        row.dataset.index = i;
+
+        const defaultTitle = guessTitle(file);
+
+        row.innerHTML = `
+            <div class="video-preview">
+                <video src="work/${encodeURIComponent(file)}" preload="metadata" muted playsinline
+                    onclick="this.paused ? this.play() : this.pause()"></video>
+                <div class="play-hint">
+                    <svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
+                </div>
+            </div>
+            <div class="form-fields">
+                <div class="filename">${file}</div>
+                <div class="field-row">
+                    <div class="field">
+                        <label>Title</label>
+                        <input type="text" class="f-title" value="${defaultTitle}" placeholder="Project title">
+                    </div>
+                </div>
+                <div class="field-row">
+                    <div class="field field-sm">
+                        <label>Year</label>
+                        <input type="number" class="f-year" value="2025" min="2000" max="2099" placeholder="2025">
+                    </div>
+                    <div class="field field-cat">
+                        <label>Category</label>
+                        <select class="f-category">
+                            <option value="shorts">Shorts</option>
+                            <option value="films">Films</option>
+                        </select>
+                    </div>
+                    <div class="field" style="justify-content:flex-end; padding-bottom:2px;">
+                        <label>Include</label>
+                        <div class="include-row">
+                            <label class="toggle">
+                                <input type="checkbox" class="f-include" checked onchange="updateCount(); toggleRow(this, ${i})">
+                                <span class="slider"></span>
+                            </label>
+                            <span class="include-label">Yes</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        list.appendChild(row);
+    });
+
+    updateCount();
+}
+
+function toggleRow(checkbox, index) {
+    const row = document.querySelector(`.video-row[data-index="${index}"]`);
+    row.classList.toggle('excluded', !checkbox.checked);
+    const label = row.querySelector('.include-label');
+    label.textContent = checkbox.checked ? 'Yes' : 'No';
+}
+
+function updateCount() {
+    const checked = document.querySelectorAll('.f-include:checked').length;
+    document.getElementById('included-count').textContent = checked;
+}
+
+function getData() {
+    const rows = document.querySelectorAll('.video-row');
+    const projects = [];
+    rows.forEach((row, i) => {
+        const include = row.querySelector('.f-include').checked;
+        if (!include) return;
+        projects.push({
+            file:     FILES[i],
+            title:    row.querySelector('.f-title').value.trim() || 'Untitled',
+            year:     row.querySelector('.f-year').value || '2025',
+            category: row.querySelector('.f-category').value,
+        });
+    });
+    return projects;
+}
+
+function buildCards(projects) {
+    return projects.map((p) => {
+        const catLabel = p.category === 'shorts' ? 'Short' : 'Film';
+        const enc = p.file.replace(/"/g, '&quot;');
+        return `    <a class="card" href="work/${enc}" target="_blank" data-category="${p.category}">
+        <video class="card-video" src="work/${enc}" autoplay muted loop playsinline></video>
+        <div class="overlay">
+            <div class="card-title">${p.title}</div>
+            <div class="card-meta">${p.year} &nbsp;·&nbsp; ${catLabel}</div>
+        </div>
+    </a>`;
+    }).join('\n\n');
+}
+
+function generate() {
+    const projects = getData();
+    if (projects.length === 0) {
+        alert('Include at least one video.');
+        return;
+    }
+
+    projects.sort((a, b) => Number(b.year) - Number(a.year));
+    const cards = buildCards(projects);
+    const n = projects.length;
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work — Steven Ros</title>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html {
+            background: #F3EDE2;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background: #F3EDE2;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        #grain {
+            position: fixed; inset: 0;
+            z-index: 60;
+            pointer-events: none;
+            mix-blend-mode: overlay;
+            opacity: 0.45;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23g)'/%3E%3C/svg%3E");
+            background-size: 200px 200px;
+            background-repeat: repeat;
+        }
+
+        #bg {
+            position: fixed; inset: 0;
+            background: #F3EDE2;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(90px);
+            opacity: 0;
+            animation: bIn 2s cubic-bezier(.22,1,.36,1) forwards;
+        }
+
+        .b1 {
+            width: 55vmin; height: 55vmin;
+            top: -10%; right: -5%;
+            background: radial-gradient(circle, rgba(108,78,212,0.28) 0%, transparent 65%);
+            animation-delay: 0.1s;
+            transform: scale(0.3);
+        }
+        .b2 {
+            width: 45vmin; height: 45vmin;
+            bottom: -5%; left: -5%;
+            background: radial-gradient(circle, rgba(220,66,94,0.22) 0%, transparent 65%);
+            animation-delay: 0.3s;
+            transform: scale(0.3);
+        }
+        .b3 {
+            width: 35vmin; height: 35vmin;
+            bottom: 20%; right: 10%;
+            background: radial-gradient(circle, rgba(238,146,82,0.18) 0%, transparent 65%);
+            animation-delay: 0.2s;
+            transform: scale(0.3);
+        }
+
+        @keyframes bIn {
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        nav {
+            position: fixed; top: 0; left: 0; right: 0;
+            z-index: 200;
+            padding: 28px 44px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Archivo Black', sans-serif;
+            font-size: 1.75rem;
+            color: #CC1111;
+            text-decoration: none;
+            letter-spacing: -0.04em;
+            line-height: 1;
+            transition: opacity 0.2s;
+        }
+        .logo:hover { opacity: 0.8; }
+
+        .nav-links { list-style: none; display: flex; gap: 36px; align-items: center; }
+
+        .nav-links a {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.74rem;
+            font-weight: 400;
+            letter-spacing: 0.10em;
+            text-transform: uppercase;
+            color: #1C1814;
+            text-decoration: none;
+            opacity: 0.52;
+            transition: opacity 0.22s ease;
+        }
+        .nav-links a:hover, .nav-links a.active { opacity: 1; }
+
+        .nav-social {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .nav-social a {
+            display: flex;
+            align-items: center;
+            color: #1C1814;
+            opacity: 0.45;
+            transition: opacity 0.22s ease;
+            text-decoration: none;
+        }
+        .nav-social a:hover { opacity: 1; }
+        .nav-social svg { width: 17px; height: 17px; }
+
+        .page-header {
+            position: relative;
+            z-index: 10;
+            padding: 148px 44px 56px;
+            display: flex;
+            align-items: baseline;
+            gap: 20px;
+        }
+
+        .page-title {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2.8rem, 6vw, 5rem);
+            font-weight: 400;
+            color: #1C1814;
+            letter-spacing: -0.015em;
+            line-height: 1;
+            opacity: 0;
+            animation: slideUpFull 0.8s cubic-bezier(.22,1,.36,1) 0.2s forwards;
+        }
+
+        .project-count {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.78rem;
+            font-weight: 400;
+            color: #1C1814;
+            opacity: 0;
+            letter-spacing: 0.04em;
+            animation: slideUp 0.8s cubic-bezier(.22,1,.36,1) 0.35s forwards;
+            transform: translateY(4px);
+            align-self: flex-end;
+            padding-bottom: 6px;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 0.45; transform: translateY(0); }
+        }
+
+        @keyframes slideUpFull {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .work-grid {
+            position: relative;
+            z-index: 10;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+            padding: 0 44px;
+        }
+
+        .tabs-bar {
+            position: relative;
+            z-index: 10;
+            padding: 0 44px 0;
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid rgba(28,24,20,0.10);
+            margin-bottom: 28px;
+            opacity: 0;
+            animation: slideUpFull 0.7s cubic-bezier(.22,1,.36,1) 0.42s forwards;
+        }
+
+        .tab-btn {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.74rem;
+            font-weight: 400;
+            letter-spacing: 0.10em;
+            text-transform: uppercase;
+            color: #1C1814;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0 0 18px 0;
+            margin-right: 36px;
+            opacity: 0.35;
+            position: relative;
+            transition: opacity 0.22s ease;
+        }
+
+        .tab-btn::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0; right: 0;
+            height: 1.5px;
+            background: #1C1814;
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.28s cubic-bezier(.22,1,.36,1);
+        }
+
+        .tab-btn.active { opacity: 1; }
+        .tab-btn.active::after { transform: scaleX(1); }
+        .tab-btn:hover { opacity: 0.65; }
+
+        .card {
+            position: relative;
+            aspect-ratio: 16 / 9;
+            overflow: hidden;
+            border-radius: 10px;
+            display: block;
+            text-decoration: none;
+            opacity: 0;
+            animation: cardIn 0.7s cubic-bezier(.22,1,.36,1) forwards;
+            will-change: transform, opacity;
+            transition: transform 0.5s cubic-bezier(.22,1,.36,1), opacity 0.24s ease;
+        }
+
+        .card:hover { transform: scale(1.012); }
+
+        .card:nth-child(1) { animation-delay: 0.20s; }
+        .card:nth-child(2) { animation-delay: 0.28s; }
+        .card:nth-child(3) { animation-delay: 0.36s; }
+        .card:nth-child(4) { animation-delay: 0.44s; }
+        .card:nth-child(5) { animation-delay: 0.52s; }
+        .card:nth-child(6) { animation-delay: 0.60s; }
+        .card:nth-child(7) { animation-delay: 0.68s; }
+        .card:nth-child(8) { animation-delay: 0.76s; }
+        .card:nth-child(9) { animation-delay: 0.84s; }
+        .card:nth-child(10) { animation-delay: 0.92s; }
+        .card:nth-child(11) { animation-delay: 1.00s; }
+        .card:nth-child(12) { animation-delay: 1.08s; }
+        .card:nth-child(13) { animation-delay: 1.16s; }
+        .card:nth-child(14) { animation-delay: 1.24s; }
+        .card:nth-child(15) { animation-delay: 1.32s; }
+        .card:nth-child(16) { animation-delay: 1.40s; }
+        .card:nth-child(17) { animation-delay: 1.48s; }
+        .card:nth-child(18) { animation-delay: 1.56s; }
+        .card:nth-child(19) { animation-delay: 1.64s; }
+        .card:nth-child(20) { animation-delay: 1.72s; }
+        .card:nth-child(21) { animation-delay: 1.80s; }
+
+        @keyframes cardIn {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .card-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.6s cubic-bezier(.22,1,.36,1);
+        }
+        .card:hover .card-video { transform: scale(1.04); }
+
+        .play svg {
+            width: 18px; height: 18px;
+            fill: white;
+            margin-left: 3px;
+        }
+
+        .overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.72) 0%, transparent 55%);
+            padding: 24px 26px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            opacity: 0;
+            transition: opacity 0.35s ease;
+        }
+        .card:hover .overlay { opacity: 1; }
+
+        .card-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.15rem;
+            font-weight: 400;
+            color: #fff;
+            letter-spacing: -0.01em;
+            transform: translateY(6px);
+            transition: transform 0.35s cubic-bezier(.22,1,.36,1);
+        }
+        .card:hover .card-title { transform: translateY(0); }
+
+        .card-meta {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 400;
+            color: rgba(255,255,255,0.55);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-top: 4px;
+            transform: translateY(6px);
+            transition: transform 0.35s 0.04s cubic-bezier(.22,1,.36,1);
+        }
+        .card:hover .card-meta { transform: translateY(0); }
+
+        footer {
+            position: relative;
+            z-index: 10;
+            margin-top: 80px;
+            padding: 48px 44px 52px;
+            border-top: 1px solid rgba(28,24,20,0.10);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 32px;
+        }
+
+        .footer-contact {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .footer-label {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.68rem;
+            font-weight: 400;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #1C1814;
+            opacity: 0.38;
+        }
+
+        .footer-contact-links {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .footer-contact-links a {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.35rem;
+            font-weight: 400;
+            color: #1C1814;
+            text-decoration: none;
+            letter-spacing: -0.01em;
+            opacity: 0.85;
+            transition: opacity 0.22s ease;
+        }
+        .footer-contact-links a:hover { opacity: 1; }
+
+        .footer-right {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 20px;
+        }
+
+        .footer-social {
+            display: flex;
+            gap: 22px;
+            align-items: center;
+        }
+
+        .footer-social a {
+            display: flex;
+            align-items: center;
+            color: #1C1814;
+            opacity: 0.40;
+            transition: opacity 0.22s ease;
+            text-decoration: none;
+        }
+        .footer-social a:hover { opacity: 1; }
+        .footer-social svg { width: 18px; height: 18px; }
+
+        .footer-copy {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.68rem;
+            color: #1C1814;
+            opacity: 0.28;
+            letter-spacing: 0.04em;
+        }
+    </style>
+</head>
+<body>
+
+<div id="grain"></div>
+
+<div id="bg">
+    <div class="blob b1"></div>
+    <div class="blob b2"></div>
+    <div class="blob b3"></div>
+</div>
+
+<nav>
+    <a href="index.html" class="logo">SR</a>
+    <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="work.html" class="active">Work</a></li>
+        <li><a href="contact.html">Contact</a></li>
+    </ul>
+    <div class="nav-social">
+        <a href="https://instagram.com/stevennros" target="_blank" aria-label="Instagram">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+            </svg>
+        </a>
+        <a href="https://linkedin.com/in/stevennros" target="_blank" aria-label="LinkedIn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/>
+                <rect x="2" y="9" width="4" height="12"/>
+                <circle cx="4" cy="4" r="2"/>
+            </svg>
+        </a>
+        <a href="mailto:stevenros65@gmail.com" aria-label="Email">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+            </svg>
+        </a>
+    </div>
+</nav>
+
+<header class="page-header">
+    <h1 class="page-title">Work</h1>
+    <span class="project-count" id="project-count">${n} Project${n !== 1 ? 's' : ''}</span>
+</header>
+
+<div class="tabs-bar">
+    <button class="tab-btn active" data-tab="all">All</button>
+    <button class="tab-btn" data-tab="shorts">Shorts</button>
+    <button class="tab-btn" data-tab="films">Films</button>
+</div>
+
+<section class="work-grid">
+
+${cards}
+
+</section>
+
+<footer>
+    <div class="footer-contact">
+        <span class="footer-label">Get in touch</span>
+        <div class="footer-contact-links">
+            <a href="mailto:stevenros65@gmail.com">stevenros65@gmail.com</a>
+            <a href="tel:+6402102776666">+64 021 027 76666</a>
+        </div>
+    </div>
+    <div class="footer-right">
+        <div class="footer-social">
+            <a href="https://instagram.com/stevennros" target="_blank" aria-label="Instagram">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+                </svg>
+            </a>
+            <a href="https://linkedin.com/in/stevennros" target="_blank" aria-label="LinkedIn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/>
+                    <rect x="2" y="9" width="4" height="12"/>
+                    <circle cx="4" cy="4" r="2"/>
+                </svg>
+            </a>
+        </div>
+        <span class="footer-copy">&copy; 2025 Steven Ros</span>
+    </div>
+</footer>
+
+<script>
+const tabs  = document.querySelectorAll('.tab-btn');
+const cards = document.querySelectorAll('.card');
+const countEl = document.getElementById('project-count');
+
+let ready = false;
+setTimeout(() => {
+    ready = true;
+    cards.forEach(c => { c.style.animation = 'none'; });
+}, 2200);
+
+tabs.forEach(btn => {
+    btn.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+
+        const cat = btn.dataset.tab;
+
+        cards.forEach(card => {
+            const match = cat === 'all' || card.dataset.category === cat;
+            if (match) {
+                card.style.display = '';
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        card.style.opacity = '1';
+                        card.style.transform = '';
+                        card.style.pointerEvents = '';
+                    });
+                });
+            } else {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(10px) scale(0.98)';
+                card.style.pointerEvents = 'none';
+                setTimeout(() => {
+                    if (card.style.opacity === '0') card.style.display = 'none';
+                }, 260);
+            }
+        });
+
+        setTimeout(() => {
+            const n = cat === 'all'
+                ? cards.length
+                : document.querySelectorAll('.card[data-category="' + cat + '"]').length;
+            countEl.textContent = n + ' Project' + (n !== 1 ? 's' : '');
+        }, 30);
+    });
+});
+
+const grain = document.getElementById('grain');
+setInterval(() => {
+    grain.style.backgroundPosition =
+        (Math.random() * 200 | 0) + 'px ' + (Math.random() * 200 | 0) + 'px';
+}, 80);
+<\/script>
+
+</body>
+</html>`;
+
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'work.html';
+    a.click();
+    URL.revokeObjectURL(url);
+
+    const msg = document.getElementById('success-msg');
+    msg.classList.add('show');
+    setTimeout(() => msg.classList.remove('show'), 4000);
+}
+
+renderList();
+</script>
+
+</body>
+</html>

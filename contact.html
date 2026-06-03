@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact — Steven Ros</title>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html {
+            background: #F3EDE2;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background: #F3EDE2;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* =============================================
+           GRAIN OVERLAY
+        ============================================= */
+        #grain {
+            position: fixed; inset: 0;
+            z-index: 60;
+            pointer-events: none;
+            mix-blend-mode: overlay;
+            opacity: 0.45;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23g)'/%3E%3C/svg%3E");
+            background-size: 200px 200px;
+            background-repeat: repeat;
+        }
+
+        /* =============================================
+           BACKGROUND BLOBS
+        ============================================= */
+        #bg {
+            position: fixed; inset: 0;
+            background: #F3EDE2;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(90px);
+            opacity: 0;
+            animation: bIn 2s cubic-bezier(.22,1,.36,1) forwards;
+        }
+
+        .b1 {
+            width: 60vmin; height: 60vmin;
+            top: -8%; left: -8%;
+            background: radial-gradient(circle, rgba(250,90,30,0.22) 0%, transparent 65%);
+            animation-delay: 0.1s;
+            transform: scale(0.3);
+        }
+        .b2 {
+            width: 50vmin; height: 50vmin;
+            bottom: -5%; right: -5%;
+            background: radial-gradient(circle, rgba(40,110,235,0.20) 0%, transparent 65%);
+            animation-delay: 0.25s;
+            transform: scale(0.3);
+        }
+        .b3 {
+            width: 40vmin; height: 40vmin;
+            top: 50%; left: 55%;
+            background: radial-gradient(circle, rgba(160,120,220,0.15) 0%, transparent 65%);
+            animation-delay: 0.15s;
+            transform: scale(0.3);
+        }
+
+        @keyframes bIn {
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* =============================================
+           NAVIGATION
+        ============================================= */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0;
+            z-index: 200;
+            padding: 28px 44px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Archivo Black', sans-serif;
+            font-size: 1.75rem;
+            color: #CC1111;
+            text-decoration: none;
+            letter-spacing: -0.04em;
+            line-height: 1;
+            transition: opacity 0.2s;
+        }
+        .logo:hover { opacity: 0.8; }
+
+        .nav-links { list-style: none; display: flex; gap: 36px; align-items: center; }
+
+        .nav-links a {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.74rem;
+            font-weight: 400;
+            letter-spacing: 0.10em;
+            text-transform: uppercase;
+            color: #1C1814;
+            text-decoration: none;
+            opacity: 0.52;
+            transition: opacity 0.22s ease;
+        }
+        .nav-links a:hover, .nav-links a.active { opacity: 1; }
+
+        .nav-social {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .nav-social a {
+            display: flex;
+            align-items: center;
+            color: #1C1814;
+            opacity: 0.45;
+            transition: opacity 0.22s ease;
+            text-decoration: none;
+        }
+        .nav-social a:hover { opacity: 1; }
+        .nav-social svg { width: 17px; height: 17px; }
+
+        /* =============================================
+           PAGE HEADER
+        ============================================= */
+        .page-header {
+            position: relative;
+            z-index: 10;
+            padding: 148px 44px 72px;
+        }
+
+        .page-title {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2.8rem, 6vw, 5rem);
+            font-weight: 400;
+            color: #1C1814;
+            letter-spacing: -0.015em;
+            line-height: 1;
+            opacity: 0;
+            animation: slideUpFull 0.8s cubic-bezier(.22,1,.36,1) 0.2s forwards;
+        }
+
+        .page-subtitle {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.88rem;
+            font-weight: 400;
+            color: #1C1814;
+            opacity: 0;
+            letter-spacing: 0.01em;
+            line-height: 1.6;
+            margin-top: 16px;
+            max-width: 340px;
+            animation: slideUp 0.8s cubic-bezier(.22,1,.36,1) 0.35s forwards;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 0.45; transform: translateY(0); }
+        }
+        @keyframes slideUpFull {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* =============================================
+           CONTACT GRID
+        ============================================= */
+        .contact-section {
+            position: relative;
+            z-index: 10;
+            padding: 0 44px 120px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2px;
+        }
+
+        /* ---- Contact Block ---- */
+        .contact-block {
+            padding: 48px 0;
+            border-top: 1px solid rgba(28,24,20,0.10);
+            opacity: 0;
+            animation: slideUpFull 0.7s cubic-bezier(.22,1,.36,1) forwards;
+        }
+
+        .contact-block:nth-child(1) { animation-delay: 0.30s; }
+        .contact-block:nth-child(2) { animation-delay: 0.38s; }
+        .contact-block:nth-child(3) { animation-delay: 0.46s; border-top: none; }
+        .contact-block:nth-child(4) { animation-delay: 0.54s; border-top: none; }
+
+        .block-label {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.68rem;
+            font-weight: 400;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: #1C1814;
+            opacity: 0.38;
+            margin-bottom: 20px;
+        }
+
+        .block-link {
+            display: block;
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(1.4rem, 2.2vw, 2rem);
+            font-weight: 400;
+            color: #1C1814;
+            text-decoration: none;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+            transition: color 0.22s ease, opacity 0.22s ease;
+            opacity: 0.85;
+        }
+        .block-link:hover { color: #CC1111; opacity: 1; }
+
+        .block-link + .block-link { margin-top: 10px; }
+
+        .block-value {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(1.4rem, 2.2vw, 2rem);
+            font-weight: 400;
+            color: #1C1814;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+            opacity: 0.85;
+        }
+
+        /* Social list */
+        .social-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .social-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            text-decoration: none;
+            color: #1C1814;
+            opacity: 0.75;
+            transition: opacity 0.22s ease;
+        }
+        .social-item:hover { opacity: 1; }
+
+        .social-item svg {
+            width: 18px; height: 18px;
+            flex-shrink: 0;
+            opacity: 0.6;
+        }
+
+        .social-handle {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(1.4rem, 2.2vw, 2rem);
+            font-weight: 400;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+        }
+
+        /* =============================================
+           DIVIDER LINE between col 1 and col 2
+        ============================================= */
+        .contact-section {
+            column-gap: 80px;
+        }
+
+        /* =============================================
+           FOOTER
+        ============================================= */
+        footer {
+            position: relative;
+            z-index: 10;
+            padding: 40px 44px 52px;
+            border-top: 1px solid rgba(28,24,20,0.10);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .footer-copy {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.68rem;
+            color: #1C1814;
+            opacity: 0.28;
+            letter-spacing: 0.04em;
+        }
+
+        /* =============================================
+           CUSTOM CURSOR
+        ============================================= */
+    </style>
+</head>
+<body>
+
+<div id="grain"></div>
+
+<div id="bg">
+    <div class="blob b1"></div>
+    <div class="blob b2"></div>
+    <div class="blob b3"></div>
+</div>
+
+<nav>
+    <a href="index.html" class="logo">SR</a>
+    <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="work.html">Work</a></li>
+        <li><a href="contact.html" class="active">Contact</a></li>
+    </ul>
+    <div class="nav-social">
+        <a href="https://instagram.com/stevennros" target="_blank" aria-label="Instagram">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+            </svg>
+        </a>
+        <a href="https://linkedin.com/in/stevennros" target="_blank" aria-label="LinkedIn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/>
+                <rect x="2" y="9" width="4" height="12"/>
+                <circle cx="4" cy="4" r="2"/>
+            </svg>
+        </a>
+        <a href="mailto:stevenros65@gmail.com" aria-label="Email">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+            </svg>
+        </a>
+    </div>
+</nav>
+
+<header class="page-header">
+    <h1 class="page-title">Get in touch</h1>
+    <p class="page-subtitle">Available for freelance projects, collaborations, and commissions.</p>
+</header>
+
+<section class="contact-section">
+
+    <!-- Phone -->
+    <div class="contact-block">
+        <div class="block-label">Phone</div>
+        <a class="block-link" href="tel:+6402102776666">+64 021 027 76666</a>
+    </div>
+
+    <!-- Email -->
+    <div class="contact-block">
+        <div class="block-label">Email</div>
+        <a class="block-link" href="mailto:stevenros65@gmail.com">stevenros65@gmail.com</a>
+    </div>
+
+    <!-- Socials -->
+    <div class="contact-block">
+        <div class="block-label">Socials</div>
+        <div class="social-list">
+            <a class="social-item" href="https://instagram.com/stevennros" target="_blank">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+                </svg>
+                <span class="social-handle">@stevennros</span>
+            </a>
+            <a class="social-item" href="https://linkedin.com/in/stevennros" target="_blank">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/>
+                    <rect x="2" y="9" width="4" height="12"/>
+                    <circle cx="4" cy="4" r="2"/>
+                </svg>
+                <span class="social-handle">stevennros</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Based -->
+    <div class="contact-block">
+        <div class="block-label">Based in</div>
+        <span class="block-value">New Zealand</span>
+    </div>
+
+</section>
+
+<footer>
+    <span class="footer-copy">© 2024 Steven Ros</span>
+</footer>
+
+<script>
+
+/* ---- ANIMATED GRAIN ---- */
+const grain = document.getElementById('grain');
+setInterval(() => {
+    grain.style.backgroundPosition =
+        (Math.random() * 200 | 0) + 'px ' + (Math.random() * 200 | 0) + 'px';
+}, 80);
+</script>
+
+</body>
+</html>

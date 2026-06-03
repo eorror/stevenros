@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Animation Test</title>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
+    <style>
+        @font-face {
+            font-family: 'Bootzy TM';
+            src: url('fonts/BootzyTM.woff2') format('woff2'),
+                 url('fonts/BootzyTM.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+    </style>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%; height: 100%;
+            overflow: hidden;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .name {
+            font-family: 'Bootzy TM', 'Archivo Black', sans-serif;
+            font-size: clamp(60px, 14vw, 220px);
+            color: #fff;
+            text-transform: uppercase;
+            white-space: nowrap;
+            letter-spacing: -0.025em;
+            line-height: 1;
+            position: relative;
+            display: block;
+            opacity: 0;
+            user-select: none;
+            text-shadow:
+                0 0 8px  rgba(255,255,255,0.9),
+                0 0 30px rgba(255,255,255,0.4),
+                0 0 70px rgba(255,255,255,0.15);
+        }
+
+        /* Scanlines */
+        #scanlines {
+            position: fixed; inset: 0;
+            background: repeating-linear-gradient(
+                180deg,
+                transparent 0px, transparent 2px,
+                rgba(0,0,0,0.10) 2px, rgba(0,0,0,0.10) 4px
+            );
+            pointer-events: none; z-index: 200;
+            animation: scanRoll 10s linear infinite;
+        }
+        @keyframes scanRoll {
+            from { background-position-y: 0px; }
+            to   { background-position-y: 4px; }
+        }
+
+        #vignette {
+            position: fixed; inset: 0;
+            background: radial-gradient(ellipse 95% 85% at 50% 50%,
+                transparent 55%, rgba(0,0,0,0.35) 85%, rgba(0,0,0,0.65) 100%);
+            pointer-events: none; z-index: 201;
+        }
+
+        #flicker {
+            position: fixed; inset: 0; pointer-events: none; z-index: 202;
+            animation: flicker 0.12s infinite;
+        }
+        @keyframes flicker {
+            0%,96% { opacity:1; } 97% { opacity:0.985; }
+            98% { opacity:1; }   99% { opacity:0.978; } 100% { opacity:1; }
+        }
+
+        #sync-bar {
+            position: fixed; left: 0; right: 0; height: 5px;
+            background: linear-gradient(90deg,
+                transparent 0%, rgba(255,255,255,0.65) 20%,
+                rgba(180,220,255,0.85) 50%, rgba(255,255,255,0.65) 80%, transparent 100%);
+            pointer-events: none; z-index: 210; opacity: 0; top: 50%;
+            mix-blend-mode: screen;
+        }
+
+        #static-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 300; opacity: 0; }
+
+        #grain {
+            position: fixed; inset: 0; z-index: 199; pointer-events: none;
+            mix-blend-mode: screen; opacity: 0.025;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23g)'/%3E%3C/svg%3E");
+            background-size: 180px 180px;
+        }
+
+        #flash { position: fixed; inset: 0; background: #fff; pointer-events: none; z-index: 400; opacity: 0; }
+
+        #hint {
+            position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%);
+            font-family: 'Bootzy TM', 'Archivo Black', sans-serif;
+            font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase;
+            color: rgba(255,255,255,0.22); z-index: 500; opacity: 0;
+            transition: opacity 0.6s; cursor: pointer; user-select: none;
+        }
+        #hint:hover { color: rgba(255,255,255,0.55); }
+    </style>
+</head>
+<body>
+
+    <span class="name" id="name">Steven Ros</span>
+
+    <div id="scanlines"></div>
+    <div id="vignette"></div>
+    <div id="flicker"></div>
+    <div id="sync-bar"></div>
+    <canvas id="static-canvas"></canvas>
+    <div id="grain"></div>
+    <div id="flash"></div>
+    <div id="hint" onclick="runIntro()">Click to replay</div>
+
+<script>
+const nameEl = document.getElementById('name');
+const flash  = document.getElementById('flash');
+const syncEl = document.getElementById('sync-bar');
+const hint   = document.getElementById('hint');
+
+/* Grain shimmer */
+setInterval(() => {
+    document.getElementById('grain').style.backgroundPosition =
+        (Math.random()*180|0)+'px '+(Math.random()*180|0)+'px';
+}, 60);
+
+/* Static canvas */
+const sc   = document.getElementById('static-canvas');
+const sctx = sc.getContext('2d');
+function resizeSC() { sc.width = innerWidth; sc.height = innerHeight; }
+resizeSC();
+window.addEventListener('resize', resizeSC);
+
+function drawStatic(density) {
+    const id = sctx.createImageData(sc.width, sc.height);
+    for (let i = 0; i < id.data.length; i += 4) {
+        const v = Math.random() < density ? (Math.random()*255|0) : 0;
+        id.data[i]=v; id.data[i+1]=v; id.data[i+2]=v; id.data[i+3]=200;
+    }
+    sctx.putImageData(id, 0, 0);
+}
+
+/* ── Prismatic channels ── */
+// Full spectrum: red → orange → yellow-green → cyan → blue → violet
+const CHANNELS = [
+    { color: '#FF1500', startX: -90, startY: -6  },
+    { color: '#FF7700', startX: -58, startY:  3  },
+    { color: '#AAFF00', startX: -24, startY: -2  },
+    { color: '#00FFCC', startX:  24, startY:  2  },
+    { color: '#0044FF', startX:  58, startY: -3  },
+    { color: '#BB00FF', startX:  90, startY:  6  },
+];
+
+const MAX_BLUR = 10;
+let clones = [];
+let syncTimer = null, caTimer = null;
+
+function buildClones() {
+    // Remove any old clones
+    clones.forEach(c => c.el.remove());
+    clones = CHANNELS.map(ch => {
+        const el = document.createElement('span');
+        el.textContent = nameEl.textContent;
+        el.style.cssText = [
+            'position:absolute', 'top:0', 'left:0',
+            'font-family:inherit', 'font-size:inherit',
+            'font-weight:inherit', 'letter-spacing:inherit',
+            'line-height:inherit', 'white-space:nowrap',
+            'text-transform:inherit', 'pointer-events:none',
+            'mix-blend-mode:screen',
+            'will-change:transform,filter,opacity',
+            `color:${ch.color}`,
+        ].join(';');
+        nameEl.appendChild(el);
+        return { el, x: ch.startX, y: ch.startY, startX: ch.startX, vx: 0, vy: 0 };
+    });
+}
+
+function applyClone(c) {
+    const t     = Math.abs(c.x / c.startX);
+    const blur  = t * MAX_BLUR;
+    c.el.style.transform = `translate(${c.x.toFixed(2)}px,${c.y.toFixed(2)}px)`;
+    c.el.style.filter    = blur > 0.05 ? `blur(${blur.toFixed(2)}px)` : 'none';
+}
+
+/* ── Ongoing glitch loops (after animation settles) ── */
+function startGlitchLoops() {
+    function syncLoop() {
+        syncTimer = setTimeout(() => {
+            syncEl.style.transition = 'none';
+            syncEl.style.top     = (8 + Math.random() * 82) + 'vh';
+            syncEl.style.opacity = '1';
+            setTimeout(() => { syncEl.style.transition = 'opacity 0.12s'; syncEl.style.opacity = '0'; },
+                50 + Math.random() * 90);
+            syncLoop();
+        }, 3000 + Math.random() * 9000);
+    }
+    syncLoop();
+}
+
+function stopLoops() {
+    clearTimeout(syncTimer);
+    clearTimeout(caTimer);
+}
+
+/* ── Main intro ── */
+function runIntro() {
+    stopLoops();
+    hint.style.opacity   = '0';
+    nameEl.style.opacity = '0';
+    nameEl.style.transition = 'none';
+    flash.style.transition  = 'none';
+    flash.style.opacity     = '0';
+    sc.style.transition     = 'none';
+    sc.style.opacity        = '0';
+    syncEl.style.opacity    = '0';
+
+    buildClones();
+    clones.forEach(applyClone);
+
+    /* 280ms — power-on flash */
+    setTimeout(() => {
+        flash.style.transition = 'opacity 0.04s';
+        flash.style.opacity = '1';
+        setTimeout(() => {
+            flash.style.transition = 'opacity 0.28s ease-out';
+            flash.style.opacity = '0';
+        }, 40);
+    }, 280);
+
+    /* 360ms — static burst */
+    setTimeout(() => {
+        sc.style.opacity = '1';
+        let f = 0;
+        const si = setInterval(() => {
+            drawStatic(Math.max(0.08, 0.7 - f * 0.06));
+            if (++f > 11) clearInterval(si);
+        }, 38);
+    }, 360);
+
+    /* 680ms — text appears, channels scatter wide, static fades */
+    setTimeout(() => {
+        nameEl.style.transition = 'none';
+        nameEl.style.opacity = '1';
+        sc.style.transition  = 'opacity 0.3s';
+        sc.style.opacity     = '0';
+
+        /* spring all channels to centre */
+        const k = 175, damp = 13;
+        let last = null;
+
+        requestAnimationFrame(function step(ts) {
+            if (!last) { last = ts; requestAnimationFrame(step); return; }
+            const dt = Math.min((ts - last) / 1000, 0.04);
+            last = ts;
+
+            let allDone = true;
+            clones.forEach(c => {
+                c.vx += (-k * c.x - damp * c.vx) * dt;
+                c.x  += c.vx * dt;
+                c.vy += (-k * c.y - damp * c.vy) * dt;
+                c.y  += c.vy * dt;
+                applyClone(c);
+                if (Math.abs(c.x) > 0.15 || Math.abs(c.vx) > 0.4) allDone = false;
+            });
+
+            if (!allDone) {
+                requestAnimationFrame(step);
+            } else {
+                clones.forEach(c => {
+                    c.el.style.transition = 'opacity 0.45s ease';
+                    c.el.style.opacity = '0';
+                    setTimeout(() => c.el.remove(), 500);
+                });
+                startGlitchLoops();
+                setTimeout(() => { hint.style.opacity = '1'; }, 1000);
+            }
+        });
+    }, 680);
+}
+
+runIntro();
+</script>
+</body>
+</html>

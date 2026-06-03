@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steven Ros</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@800&family=Big+Shoulders+Display:wght@900&family=Bodoni+Moda:opsz,wght@6..96,400;6..96,700&family=Bebas+Neue&family=Abril+Fatface&family=Archivo+Black&family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%; height: 100%;
+            overflow: hidden;
+            cursor: none;
+            background: #F5EDE0;
+        }
+
+        /* =============================================
+           GRAIN
+        ============================================= */
+        #grain {
+            position: fixed; inset: 0;
+            z-index: 60; pointer-events: none;
+            mix-blend-mode: overlay; opacity: 0.78;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)'/%3E%3C/svg%3E");
+            background-size: 160px 160px; background-repeat: repeat;
+        }
+
+        /* =============================================
+           GRADIENT BLOBS
+        ============================================= */
+        #bg {
+            position: fixed; inset: 0;
+            background: #F5EDE0; z-index: 0; overflow: hidden;
+        }
+        .blob {
+            position: absolute; border-radius: 50%;
+            filter: blur(72px); opacity: 0;
+            will-change: transform, opacity;
+        }
+        /* Orange flood — left edge */
+        .b1 { width:120vmin; height:120vmin; top:65%; left:-8%; background:radial-gradient(circle,rgba(255,95,0,1.0) 0%,transparent 62%); animation:bIn 1.5s 0.00s cubic-bezier(.22,1,.36,1) forwards; transform:translate(-50%,-50%) scale(.08); }
+        /* Orange flood — bottom centre */
+        .b2 { width:100vmin; height:100vmin; top:95%; left:42%; background:radial-gradient(circle,rgba(255,130,0,.95) 0%,transparent 62%); animation:bIn 1.5s 0.10s cubic-bezier(.22,1,.36,1) forwards; transform:translate(-50%,-50%) scale(.08); }
+        /* Vivid blue orb — centre */
+        .b3 { width:75vmin;  height:75vmin;  top:46%; left:34%; background:radial-gradient(circle,rgba(90,125,230,.95) 0%,transparent 62%); animation:bIn 1.5s 0.20s cubic-bezier(.22,1,.36,1) forwards; transform:translate(-50%,-50%) scale(.08); }
+        /* Bright amber — top left */
+        .b4 { width:65vmin;  height:65vmin;  top:8%;  left:6%;  background:radial-gradient(circle,rgba(255,150,10,.80) 0%,transparent 62%); animation:bIn 1.5s 0.08s cubic-bezier(.22,1,.36,1) forwards; transform:translate(-50%,-50%) scale(.08); }
+        /* Warm cream — right stays airy */
+        .b5 { width:75vmin;  height:75vmin;  top:28%; left:86%; background:radial-gradient(circle,rgba(252,238,218,.85) 0%,transparent 62%); animation:bIn 1.5s 0.16s cubic-bezier(.22,1,.36,1) forwards; transform:translate(-50%,-50%) scale(.08); }
+        @keyframes bIn { to { opacity:1; transform:translate(-50%,-50%) scale(1); } }
+
+        /* =============================================
+           NAVIGATION
+        ============================================= */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0;
+            z-index: 200; padding: 24px 44px;
+            display: flex; justify-content: space-between; align-items: center;
+            opacity: 0; animation: fIn 0.7s 2.6s forwards;
+        }
+
+        /* ── CHUNKY RED LOGO ── */
+        .logo {
+            font-family: 'Archivo Black', sans-serif;
+            font-size: 1.75rem;
+            color: #CC1111;
+            text-decoration: none;
+            letter-spacing: -0.04em;
+            line-height: 1;
+            transition: opacity 0.2s;
+        }
+        .logo:hover { opacity: 0.8; }
+
+        .nav-links { list-style: none; display: flex; gap: 36px; align-items: center; }
+        .nav-links a {
+            font-family: 'Inter', sans-serif; font-size: 0.74rem; font-weight: 400;
+            letter-spacing: 0.10em; text-transform: uppercase;
+            color: #1C1814; text-decoration: none;
+            opacity: 0.52; transition: opacity 0.22s ease;
+        }
+        .nav-links a:hover { opacity: 1; }
+
+        .nav-social { display: flex; gap: 20px; align-items: center; }
+        .nav-social a {
+            display: flex; align-items: center;
+            color: #1C1814; opacity: 0.45;
+            transition: opacity 0.22s; text-decoration: none;
+        }
+        .nav-social a:hover { opacity: 1; }
+        .nav-social svg { width: 17px; height: 17px; }
+
+        @keyframes fIn { to { opacity: 1; } }
+
+        /* =============================================
+           HERO
+        ============================================= */
+        .hero { position: relative; z-index: 10; width: 100vw; height: 100vh; }
+
+        /* ── NAME — pinned to exact center ── */
+        .name-wrap {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 30; pointer-events: none;
+        }
+        .name {
+            font-family: 'Syne', sans-serif; font-weight: 800;
+            font-size: clamp(3.5rem, 12vw, 12rem);
+            font-weight: 400;
+            color: #CC1111;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+            user-select: none;
+            line-height: 1;
+            text-transform: uppercase;
+            -webkit-text-stroke: 2px #CC1111;
+            text-shadow:
+                0 0 18px rgba(204,17,17,0.55),
+                0 0 40px rgba(204,17,17,0.28),
+                0 0 80px rgba(204,17,17,0.14);
+        }
+
+        /* Per-letter slide-in */
+        .l {
+            display: inline-block;
+            opacity: 0;
+            animation: letterIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+        .l-sp { display: inline-block; width: 0.28em; }
+
+        @keyframes letterIn {
+            from { opacity: 0; transform: translateX(-52px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+
+        /* =============================================
+           SCATTERED CARDS — created entirely by JS
+        ============================================= */
+        #scatter {
+            position: absolute; inset: 0;
+            z-index: 20; overflow: hidden;
+        }
+
+        /* Shared card style */
+        .sc {
+            position: absolute;
+            border-radius: 10px;
+            overflow: hidden;
+            will-change: left;
+        }
+        .sc img { width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; }
+
+        /* Placeholder tones */
+        .ph1 { background: linear-gradient(150deg,#2A1F1A,#4D3028); }
+        .ph2 { background: linear-gradient(150deg,#0B2626,#1A4038); }
+        .ph3 { background: linear-gradient(150deg,#D2CCC0,#B2ACA0); }
+        .ph4 { background: linear-gradient(150deg,#080C1C,#161E38); }
+        .ph5 { background: linear-gradient(150deg,#1A120E,#3A2018); }
+        .ph6 { background: linear-gradient(150deg,#C4A474,#9E8452); }
+        .ph7 { background: linear-gradient(150deg,#162814,#264428); }
+
+        /* =============================================
+           CUSTOM CURSOR
+        ============================================= */
+        #cur  { position:fixed; width:7px; height:7px; background:#1C1814; border-radius:50%; pointer-events:none; z-index:9999; transform:translate(-50%,-50%); }
+        #ring { position:fixed; width:28px; height:28px; border:1.5px solid rgba(28,24,20,.30); border-radius:50%; pointer-events:none; z-index:9998; transform:translate(-50%,-50%); transition:width .3s,height .3s; }
+    </style>
+</head>
+<body>
+
+<div id="cur"></div>
+<div id="ring"></div>
+<div id="grain"></div>
+
+<div id="bg">
+    <div class="blob b1"></div><div class="blob b2"></div>
+    <div class="blob b3"></div><div class="blob b4"></div><div class="blob b5"></div>
+</div>
+
+<nav>
+    <a href="index.html" class="logo">SR</a>
+    <ul class="nav-links">
+        <li><a href="work.html">Work</a></li>
+    </ul>
+    <div class="nav-social">
+        <a href="https://instagram.com/stevennros" target="_blank" aria-label="Instagram">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+        </a>
+        <a href="https://linkedin.com/in/stevennros" target="_blank" aria-label="LinkedIn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+        </a>
+        <a href="mailto:stevenros65@gmail.com" aria-label="Email">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        </a>
+    </div>
+</nav>
+
+<main class="hero">
+    <div id="scatter"></div>
+    <div class="name-wrap">
+        <h1 class="name"><!--
+            Each letter slides in from the left, 35ms apart, starting at 2.0s.
+            .l-sp = space glyph (no animation needed).
+        --><span class="l" style="animation-delay:2.000s">S</span><!--
+        --><span class="l" style="animation-delay:2.035s">t</span><!--
+        --><span class="l" style="animation-delay:2.070s">e</span><!--
+        --><span class="l" style="animation-delay:2.105s">v</span><!--
+        --><span class="l" style="animation-delay:2.140s">e</span><!--
+        --><span class="l" style="animation-delay:2.175s">n</span><!--
+        --><span class="l-sp"> </span><!--
+        --><span class="l" style="animation-delay:2.210s">R</span><!--
+        --><span class="l" style="animation-delay:2.245s">o</span><!--
+        --><span class="l" style="animation-delay:2.280s">s</span></h1>
+    </div>
+</main>
+
+<script>
+/* ── CURSOR ── */
+const cur = document.getElementById('cur'), ring = document.getElementById('ring');
+let cx=0,cy=0,rx=0,ry=0,mx=innerWidth/2,my=innerHeight/2;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;});
+(function ct(){cx+=(mx-cx)*.18;cy+=(my-cy)*.18;rx+=(mx-rx)*.08;ry+=(my-ry)*.08;cur.style.left=cx+'px';cur.style.top=cy+'px';ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(ct);})();
+
+/* ── GRAIN ── */
+const grain=document.getElementById('grain');
+setInterval(()=>{grain.style.backgroundPosition=(Math.random()*200|0)+'px '+(Math.random()*200|0)+'px';},80);
+
+/* ── SCATTERED FILM STRIP ──────────────────────────────────────────
+   Cards have three depth layers (spd / z-index):
+     Front  (spd ≈ 0.75)  — slow, on top       z:3
+     Mid    (spd ≈ 1.00)  — normal              z:2
+     Back   (spd ≈ 1.30)  — fast, underneath   z:1
+
+   On scroll the wheel velocity is added to BASE_SPD and then
+   multiplied per card by its depth spd, so back cards accelerate
+   more visibly. Velocity decays slowly (DECAY = 0.92) so the ease
+   out is long and satisfying.
+──────────────────────────────────────────────────────────────────── */
+(function filmStrip(){
+
+    /* card definitions: x = left in the repeating set (px)
+                         y = top as fraction of vh
+                         spd: >1 = back (faster), <1 = front (slower)
+                         zi:  z-index (3=top/front, 1=bottom/back)       */
+    const DEFS = [
+        { ph:'ph1', x:  18, y:.19, w:116, h:145, rot:-2.5, spd:0.78, zi:3 },
+        { ph:'ph2', x: 168, y:.56, w:104, h:130, rot: 1.8, spd:1.32, zi:1 },
+        { ph:'ph3', x: 296, y:.24, w:130, h:162, rot:-1.2, spd:0.95, zi:2 },
+        { ph:'ph4', x: 450, y:.63, w:108, h:135, rot: 2.2, spd:1.22, zi:1 },
+        { ph:'ph5', x: 576, y:.14, w:148, h:119, rot:-0.8, spd:0.72, zi:3 },
+        { ph:'ph6', x: 750, y:.48, w:116, h:145, rot: 1.5, spd:1.08, zi:2 },
+        { ph:'ph7', x: 890, y:.29, w:104, h:130, rot:-1.8, spd:0.88, zi:3 },
+        { ph:'ph1', x:1012, y:.61, w:130, h:162, rot: 0.9, spd:1.28, zi:1 },
+        { ph:'ph2', x:1160, y:.20, w:116, h:145, rot:-2.1, spd:0.75, zi:3 },
+        { ph:'ph3', x:1300, y:.52, w:104, h:130, rot: 1.3, spd:1.18, zi:1 },
+        { ph:'ph4', x:1430, y:.26, w:130, h:162, rot:-1.5, spd:0.92, zi:2 },
+        { ph:'ph5', x:1585, y:.66, w:108, h:135, rot: 2.0, spd:1.12, zi:1 },
+    ];
+    const SET_W = 1780;           // width of one repeating set (px)
+    const BASE_SPD   = 48;        // px / second baseline drift
+    const DECAY      = 0.92;      // wheel velocity decay (lower = eases slower)
+    const WHEEL_MUL  = 0.28;      // how much each scroll tick adds
+    const WHEEL_MAX  = 280;       // max extra speed from scrolling
+    const INTRO_MS   = 1350;
+    const HOLD_MS    = 900;
+
+    const VH = innerHeight;
+    const scatter = document.getElementById('scatter');
+
+    /* Build card elements */
+    const cards = DEFS.map(d => {
+        const el = document.createElement('div');
+        el.className = 'sc ' + d.ph;
+        el.style.cssText =
+            `left:${d.x}px;top:${Math.round(d.y*VH)}px;` +
+            `width:${d.w}px;height:${d.h}px;` +
+            `transform:rotate(${d.rot}deg);z-index:${d.zi};`;
+        scatter.appendChild(el);
+        return { ...d, el, offsetX: 0 };
+    });
+
+    /* Scroll / wheel input */
+    let wheelVel = 0;
+    const addWheel = e => {
+        if (phase !== 'scroll') return;
+        wheelVel = Math.min(WHEEL_MAX, Math.max(-60, wheelVel + e.deltaY * WHEEL_MUL));
+    };
+    window.addEventListener('wheel',    addWheel, { passive:true });
+    /* touch support */
+    let lastTouchY = null;
+    window.addEventListener('touchstart', e => { lastTouchY = e.touches[0].clientY; }, { passive:true });
+    window.addEventListener('touchmove', e => {
+        if (phase !== 'scroll' || lastTouchY === null) return;
+        const dy = lastTouchY - e.touches[0].clientY;
+        wheelVel = Math.min(WHEEL_MAX, Math.max(-60, wheelVel + dy * 1.2));
+        lastTouchY = e.touches[0].clientY;
+    }, { passive:true });
+
+    /* Phase state */
+    let phase = 'intro';
+    let introStart = null, holdStart = null, lastTime = null;
+    const START_X = innerWidth + 80;
+
+    function easeOutExpo(t){ return t>=1 ? 1 : 1 - Math.pow(2,-10*t); }
+
+    /* ── Main animation loop ── */
+    (function frame(ts){
+        if (!introStart) introStart = ts;
+        const dt = lastTime ? Math.min(ts-lastTime, 50) : 16;
+        lastTime = ts;
+
+        if (phase === 'intro') {
+            /* All cards slide in together */
+            const t = Math.min((ts-introStart)/INTRO_MS, 1);
+            const offset = START_X * (1 - easeOutExpo(t));
+            cards.forEach(c => { c.el.style.left = (c.x + offset).toFixed(1)+'px'; });
+            if (t >= 1) { phase='hold'; holdStart=ts; }
+
+        } else if (phase === 'hold') {
+            /* Freeze at natural positions while name fades in */
+            cards.forEach(c => { c.el.style.left = c.x+'px'; });
+            if (ts-holdStart >= HOLD_MS) phase='scroll';
+
+        } else {
+            /* ── SCROLL PHASE ──
+               - Decay wheel velocity every frame (DECAY < 1 → slow ease-out)
+               - Each card moves at (BASE_SPD + wheelVel) × its own depth spd
+               - Back cards (spd>1) amplify the scroll boost more visibly    */
+            wheelVel *= DECAY;
+            const totalSpd = BASE_SPD + wheelVel;
+
+            cards.forEach(c => {
+                c.offsetX -= totalSpd * c.spd * (dt/1000);
+
+                /* Seamless wrap */
+                const absX = c.x + c.offsetX;
+                if (absX + c.w < -10)          c.offsetX += SET_W;
+                if (absX > innerWidth + 200)   c.offsetX -= SET_W;
+
+                c.el.style.left = (c.x + c.offsetX).toFixed(2)+'px';
+            });
+        }
+
+        requestAnimationFrame(frame);
+    })();
+
+})();
+</script>
+</body>
+</html>

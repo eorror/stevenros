@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work — Steven Ros</title>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html { background: #FFFFFF; scroll-behavior: smooth; }
+        body { background: #FFFFFF; overflow-x: hidden; min-height: 100vh; }
+
+        #grain {
+            position: fixed; inset: 0; z-index: 60; pointer-events: none;
+            mix-blend-mode: overlay; opacity: 0.35;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23g)'/%3E%3C/svg%3E");
+            background-size: 200px 200px; background-repeat: repeat;
+        }
+
+        #bg { position: fixed; inset: 0; background: #FFFFFF; z-index: 0; overflow: hidden; pointer-events: none; }
+        .blob { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0; animation: bIn 2s cubic-bezier(.22,1,.36,1) forwards; }
+        .b1 { width: 55vmin; height: 55vmin; top: -10%; right: -5%; background: radial-gradient(circle, rgba(108,78,212,0.14) 0%, transparent 65%); animation-delay: 0.1s; transform: scale(0.3); }
+        .b2 { width: 45vmin; height: 45vmin; bottom: -5%; left: -5%; background: radial-gradient(circle, rgba(220,66,94,0.10) 0%, transparent 65%); animation-delay: 0.3s; transform: scale(0.3); }
+        .b3 { width: 35vmin; height: 35vmin; bottom: 20%; right: 10%; background: radial-gradient(circle, rgba(238,146,82,0.09) 0%, transparent 65%); animation-delay: 0.2s; transform: scale(0.3); }
+        @keyframes bIn { to { opacity: 1; transform: scale(1); } }
+
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+            padding: 28px 44px; display: flex; justify-content: space-between; align-items: center;
+        }
+        .logo { font-family: 'Archivo Black', sans-serif; font-size: 1.75rem; color: #CC1111; text-decoration: none; letter-spacing: -0.04em; line-height: 1; transition: opacity 0.2s; }
+        .logo:hover { opacity: 0.8; }
+        .nav-links { list-style: none; display: flex; gap: 36px; align-items: center; }
+        .nav-links a { font-family: 'Inter', sans-serif; font-size: 0.74rem; font-weight: 400; letter-spacing: 0.10em; text-transform: uppercase; color: #1C1814; text-decoration: none; opacity: 0.52; transition: opacity 0.22s ease; }
+        .nav-links a:hover, .nav-links a.active { opacity: 1; }
+        .nav-social { display: flex; gap: 20px; align-items: center; }
+        .nav-social a { display: flex; align-items: center; color: #1C1814; opacity: 0.45; transition: opacity 0.22s ease; text-decoration: none; }
+        .nav-social a:hover { opacity: 1; }
+        .nav-social svg { width: 17px; height: 17px; }
+
+        /* White wipe used for page transitions */
+        #wipe {
+            position: fixed; inset: 0; background: #FFFFFF;
+            z-index: 500; opacity: 0; pointer-events: none;
+            transition: opacity 0.45s ease;
+        }
+        #wipe.show { opacity: 1; pointer-events: all; }
+
+        /* =============================================
+           FOLDER LANDING
+        ============================================= */
+        .folders-view {
+            position: relative; z-index: 10;
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            gap: clamp(36px, 6vw, 96px);
+            padding: 140px 44px 80px;
+            flex-wrap: wrap;
+            transition: opacity 0.45s ease, transform 0.5s cubic-bezier(.22,1,.36,1);
+        }
+        .folders-view.hidden { display: none; }
+        .folders-view.leaving { opacity: 0; transform: scale(0.88); pointer-events: none; }
+
+        .folder {
+            background: none; border: none; cursor: pointer; padding: 0;
+            display: flex; flex-direction: column; align-items: center; gap: 26px;
+            opacity: 0; transform: scale(0.2) translateY(40px);
+            animation: folderIn 0.85s cubic-bezier(.34,1.56,.5,1) forwards;
+        }
+        .folder:nth-child(1) { animation-delay: 0.12s; }
+        .folder:nth-child(2) { animation-delay: 0.26s; }
+        .folder:nth-child(3) { animation-delay: 0.40s; }
+        @keyframes folderIn {
+            from { opacity: 0; transform: scale(0.2) translateY(40px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .folder-vis {
+            position: relative;
+            width: clamp(240px, 24vw, 320px);
+            height: clamp(184px, 18vw, 246px);
+            transition: transform 0.4s cubic-bezier(.22,1,.36,1);
+        }
+        .folder:hover .folder-vis { transform: translateY(-12px); }
+
+        .peek {
+            position: absolute;
+            width: 50%; aspect-ratio: 16/10;
+            border-radius: 7px; overflow: hidden;
+            background: #111;
+            box-shadow: 0 10px 24px rgba(0,0,0,0.24);
+            transition: transform 0.45s cubic-bezier(.22,1,.36,1);
+            z-index: 2;
+        }
+        .peek video { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .peek.p1 { left: 7%;  top: 4%;  transform: rotate(-9deg); }
+        .peek.p2 { left: 25%; top: -3%; transform: rotate(0deg); z-index: 3; }
+        .peek.p3 { right: 7%; top: 4%;  transform: rotate(9deg); }
+        .folder:hover .peek.p1 { transform: rotate(-13deg) translate(-10px, -14px); }
+        .folder:hover .peek.p2 { transform: translateY(-16px); }
+        .folder:hover .peek.p3 { transform: rotate(13deg) translate(10px, -14px); }
+
+        .folder-back {
+            position: absolute; left: 0; right: 0; bottom: 0;
+            height: 80%; border-radius: 14px;
+            background: linear-gradient(180deg, #54B2F0 0%, #3E9AE6 100%);
+            z-index: 1;
+        }
+        .folder-back::before {
+            content: ''; position: absolute; top: -7%; left: 6%;
+            width: 38%; height: 14%;
+            border-radius: 9px 9px 0 0; background: #54B2F0;
+        }
+        .folder-front {
+            position: absolute; left: 0; right: 0; bottom: 0;
+            height: 70%; border-radius: 6px 14px 14px 14px;
+            background: linear-gradient(165deg, #7FCAF9 0%, #4FA8EC 100%);
+            box-shadow: 0 24px 44px rgba(40,120,200,0.32), inset 0 1px 0 rgba(255,255,255,0.40);
+            z-index: 4;
+        }
+
+        .folder-label { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 400; color: #1C1814; letter-spacing: -0.01em; text-align: center; }
+        .folder-count { display: block; margin-top: 6px; font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; color: #1C1814; opacity: 0.4; }
+
+        /* =============================================
+           GALLERY
+        ============================================= */
+        .gallery-view { position: relative; z-index: 10; }
+        .gallery-view.hidden { display: none; }
+        .gallery-header { padding: 132px 44px 40px; display: flex; align-items: baseline; gap: 20px; }
+        .back-btn { font-family: 'Inter', sans-serif; font-size: 0.74rem; font-weight: 400; letter-spacing: 0.10em; text-transform: uppercase; color: #1C1814; background: none; border: none; cursor: pointer; opacity: 0.55; transition: opacity 0.2s ease; display: inline-flex; align-items: center; gap: 8px; align-self: center; }
+        .back-btn:hover { opacity: 1; }
+        .gallery-title { font-family: 'Playfair Display', serif; font-size: clamp(2.4rem, 5vw, 4rem); font-weight: 400; color: #1C1814; letter-spacing: -0.015em; line-height: 1; }
+        .gallery-count { font-family: 'Inter', sans-serif; font-size: 0.78rem; color: #1C1814; opacity: 0.45; letter-spacing: 0.04em; align-self: flex-end; padding-bottom: 6px; }
+
+        .work-grid { position: relative; z-index: 10; display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; padding: 0 44px; }
+
+        .card { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 10px; display: block; text-decoration: none; opacity: 0; transform: translateY(24px); transition: transform 0.5s cubic-bezier(.22,1,.36,1), opacity 0.4s ease; will-change: transform, opacity; }
+        .card.in { opacity: 1; transform: translateY(0); }
+        .card:hover { transform: scale(1.012); }
+        .card-video { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.6s cubic-bezier(.22,1,.36,1); }
+        .card:hover .card-video { transform: scale(1.04); }
+
+        .overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.72) 0%, transparent 55%); padding: 24px 26px; display: flex; flex-direction: column; justify-content: flex-end; opacity: 0; transition: opacity 0.35s ease; }
+        .card:hover .overlay { opacity: 1; }
+        .card-title { font-family: 'Playfair Display', serif; font-size: 1.15rem; font-weight: 400; color: #fff; letter-spacing: -0.01em; transform: translateY(6px); transition: transform 0.35s cubic-bezier(.22,1,.36,1); }
+        .card:hover .card-title { transform: translateY(0); }
+        .card-meta { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 400; color: rgba(255,255,255,0.55); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 4px; transform: translateY(6px); transition: transform 0.35s 0.04s cubic-bezier(.22,1,.36,1); }
+        .card:hover .card-meta { transform: translateY(0); }
+
+        footer { position: relative; z-index: 10; margin-top: 80px; padding: 48px 44px 52px; border-top: 1px solid rgba(28,24,20,0.10); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 32px; }
+        .footer-contact { display: flex; flex-direction: column; gap: 10px; }
+        .footer-label { font-family: 'Inter', sans-serif; font-size: 0.68rem; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; color: #1C1814; opacity: 0.38; }
+        .footer-contact-links { display: flex; flex-direction: column; gap: 6px; }
+        .footer-contact-links a { font-family: 'Playfair Display', serif; font-size: 1.35rem; font-weight: 400; color: #1C1814; text-decoration: none; letter-spacing: -0.01em; opacity: 0.85; transition: opacity 0.22s ease; }
+        .footer-contact-links a:hover { opacity: 1; }
+        .footer-right { display: flex; flex-direction: column; align-items: flex-end; gap: 20px; }
+        .footer-social { display: flex; gap: 22px; align-items: center; }
+        .footer-social a { display: flex; align-items: center; color: #1C1814; opacity: 0.40; transition: opacity 0.22s ease; text-decoration: none; }
+        .footer-social a:hover { opacity: 1; }
+        .footer-social svg { width: 18px; height: 18px; }
+        .footer-copy { font-family: 'Inter', sans-serif; font-size: 0.68rem; color: #1C1814; opacity: 0.28; letter-spacing: 0.04em; }
+
+        @media (max-width: 720px) { .work-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+<div id="grain"></div>
+<div id="bg"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+<div id="wipe"></div>
+
+<nav>
+    <a href="index.html" class="logo">SR</a>
+    <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="work.html" class="active">Work</a></li>
+        <li><a href="contact.html">Contact</a></li>
+    </ul>
+    <div class="nav-social">
+        <a href="https://instagram.com/stevennros" target="_blank" aria-label="Instagram">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+        </a>
+        <a href="https://linkedin.com/in/stevennros" target="_blank" aria-label="LinkedIn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+        </a>
+        <a href="mailto:stevenros65@gmail.com" aria-label="Email">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        </a>
+    </div>
+</nav>
+
+<!-- ============ FOLDER LANDING ============ -->
+<section class="folders-view" id="folders">
+
+    <div class="folder" data-cat="reels" data-label="Reels" tabindex="0" role="button" aria-label="Open Reels">
+        <div class="folder-vis">
+            <div class="folder-back"></div>
+            <div class="peek p1"><video src="work/reel one v4.mp4" muted loop playsinline autoplay></video></div>
+            <div class="peek p2"><video src="work/esports v2.mp4" muted loop playsinline autoplay></video></div>
+            <div class="peek p3"><video src="work/halloween v5.mp4" muted loop playsinline autoplay></video></div>
+            <div class="folder-front"></div>
+        </div>
+        <div class="folder-label">Reels<span class="folder-count" data-count="reels"></span></div>
+    </div>
+
+    <div class="folder" data-cat="films" data-label="Films" tabindex="0" role="button" aria-label="Open Films">
+        <div class="folder-vis">
+            <div class="folder-back"></div>
+            <div class="peek p1"><video src="work/ESA V TANSA V1.MP4" muted loop playsinline autoplay></video></div>
+            <div class="peek p2"><video src="work/FINAL FINAL fallen angels 2.mp4" muted loop playsinline autoplay></video></div>
+            <div class="peek p3"><video src="work/ESA V TANSA V4 26.03.2025.mp4" muted loop playsinline autoplay></video></div>
+            <div class="folder-front"></div>
+        </div>
+        <div class="folder-label">Films<span class="folder-count" data-count="films"></span></div>
+    </div>
+
+    <div class="folder" data-cat="all" data-label="All Work" tabindex="0" role="button" aria-label="Open All Work">
+        <div class="folder-vis">
+            <div class="folder-back"></div>
+            <div class="peek p1"><video src="work/spinning v2.mp4" muted loop playsinline autoplay></video></div>
+            <div class="peek p2"><video src="work/video 1 v7.mp4" muted loop playsinline autoplay></video></div>
+            <div class="peek p3"><video src="work/web3 v1.mp4" muted loop playsinline autoplay></video></div>
+            <div class="folder-front"></div>
+        </div>
+        <div class="folder-label">All Work<span class="folder-count" data-count="all"></span></div>
+    </div>
+
+</section>
+
+<!-- ============ GALLERY ============ -->
+<section class="gallery-view hidden" id="gallery">
+    <header class="gallery-header">
+        <button class="back-btn" id="backBtn">&larr;&nbsp; Folders</button>
+        <h1 class="gallery-title" id="galleryTitle">Reels</h1>
+        <span class="gallery-count" id="galleryCount"></span>
+    </header>
+
+    <section class="work-grid" id="workGrid">
+        <a class="card" href="work/ESA V TANSA V1.MP4" target="_blank" data-category="films">
+            <video class="card-video" data-src="work/ESA V TANSA V1.MP4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">ESA v TANSA : The Heist</div><div class="card-meta">2026 &nbsp;·&nbsp; Film</div></div>
+        </a>
+        <a class="card" href="work/song test.mp4" target="_blank" data-category="reels">
+            <video class="card-video" data-src="work/song test.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">Tech Mixer</div><div class="card-meta">2026 &nbsp;·&nbsp; Reel</div></div>
+        </a>
+        <a class="card" href="work/pln v1.mp4" target="_blank" data-category="reels">
+            <video class="card-video" data-src="work/pln v1.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">Project Launch night 2026</div><div class="card-meta">2026 &nbsp;·&nbsp; Reel</div></div>
+        </a>
+        <a class="card" href="work/v6772.mp4" target="_blank" data-category="reels">
+            <video class="card-video" data-src="work/v6772.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">ESA welcome video 2026</div><div class="card-meta">2026 &nbsp;·&nbsp; Reel</div></div>
+        </a>
+        <a class="card" href="work/spinning v2.mp4" target="_blank" data-category="reels">
+            <video class="card-video" data-src="work/spinning v2.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">ESA Keychain</div><div class="card-meta">2026 &nbsp;·&nbsp; Reel</div></div>
+        </a>
+        <a class="card" href="work/halloween v5.mp4" target="_blank" data-category="reels">
+            <video class="card-video" data-src="work/halloween v5.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">AESIR halloween</div><div class="card-meta">2025 &nbsp;·&nbsp; Reel</div></div>
+        </a>
+        <a class="card" href="work/esports v2.mp4" target="_blank" data-category="reels">
+            <video class="card-video" data-src="work/esports v2.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">Esports Interclubs</div><div class="card-meta">2025 &nbsp;·&nbsp; Reel</div></div>
+        </a>
+        <a class="card" href="work/web3 v1.mp4" target="_blank" data-category="reels">
+            <video class="card-video" data-src="work/web3 v1.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">Web3 Introduction</div><div class="card-meta">2025 &nbsp;·&nbsp; Reel</div></div>
+        </a>
+        <a class="card" href="work/video 2 v2 .mp4" target="_blank" data-category="reels">
+            <video class="card-video" data-src="work/video 2 v2 .mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">Cocktail night Visuals</div><div class="card-meta">2025 &nbsp;·&nbsp; Reel</div></div>
+        </a>
+        <a class="card" href="work/video 1 v7.mp4" target="_blank" data-category="reels">
+            <video class="card-video" data-src="work/video 1 v7.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">Cocktail night Theme</div><div class="card-meta">2025 &nbsp;·&nbsp; Reel</div></div>
+        </a>
+        <a class="card" href="work/reel 3 v3.mp4" target="_blank" data-category="reels">
+            <video class="card-video" data-src="work/reel 3 v3.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">ESA camp 2</div><div class="card-meta">2025 &nbsp;·&nbsp; Reel</div></div>
+        </a>
+        <a class="card" href="work/reel one v4.mp4" target="_blank" data-category="reels">
+            <video class="card-video" data-src="work/reel one v4.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">ESA camp 1</div><div class="card-meta">2025 &nbsp;·&nbsp; Reel</div></div>
+        </a>
+        <a class="card" href="work/infinity sleep v3 .mp4" target="_blank" data-category="reels">
+            <video class="card-video" data-src="work/infinity sleep v3 .mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">Infinity Sleep</div><div class="card-meta">2025 &nbsp;·&nbsp; Reel</div></div>
+        </a>
+        <a class="card" href="work/raided v7 08.04.2025.mp4" target="_blank" data-category="reels">
+            <video class="card-video" data-src="work/raided v7 08.04.2025.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">Raided</div><div class="card-meta">2025 &nbsp;·&nbsp; Reel</div></div>
+        </a>
+        <a class="card" href="work/ESA V TANSA V4 26.03.2025.mp4" target="_blank" data-category="films">
+            <video class="card-video" data-src="work/ESA V TANSA V4 26.03.2025.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">Esa V Tansa</div><div class="card-meta">2025 &nbsp;·&nbsp; Film</div></div>
+        </a>
+        <a class="card" href="work/grog reel v4 28.02.25.mp4" target="_blank" data-category="reels">
+            <video class="card-video" data-src="work/grog reel v4 28.02.25.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">Grog</div><div class="card-meta">2025 &nbsp;·&nbsp; Reel</div></div>
+        </a>
+        <a class="card" href="work/fully done.mp4" target="_blank" data-category="reels">
+            <video class="card-video" data-src="work/fully done.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">AESIR Halloween 2025</div><div class="card-meta">2024 &nbsp;·&nbsp; Reel</div></div>
+        </a>
+        <a class="card" href="work/raided nz finished.mp4" target="_blank" data-category="reels">
+            <video class="card-video" data-src="work/raided nz finished.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">RaidedNZ ad</div><div class="card-meta">2024 &nbsp;·&nbsp; Reel</div></div>
+        </a>
+        <a class="card" href="work/FINAL FINAL fallen angels 2.mp4" target="_blank" data-category="films">
+            <video class="card-video" data-src="work/FINAL FINAL fallen angels 2.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">Fallen Angels</div><div class="card-meta">2024 &nbsp;·&nbsp; Film</div></div>
+        </a>
+    </section>
+</section>
+
+<footer>
+    <div class="footer-contact">
+        <span class="footer-label">Get in touch</span>
+        <div class="footer-contact-links">
+            <a href="mailto:stevenros65@gmail.com">stevenros65@gmail.com</a>
+            <a href="tel:+6402102776666">+64 021 027 76666</a>
+        </div>
+    </div>
+    <div class="footer-right">
+        <div class="footer-social">
+            <a href="https://instagram.com/stevennros" target="_blank" aria-label="Instagram">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+            </a>
+            <a href="https://linkedin.com/in/stevennros" target="_blank" aria-label="LinkedIn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+            </a>
+        </div>
+        <span class="footer-copy">&copy; 2025 Steven Ros</span>
+    </div>
+</footer>
+
+<script>
+/* ── GRAIN ── */
+const grain = document.getElementById('grain');
+setInterval(() => { grain.style.backgroundPosition = (Math.random()*200|0)+'px '+(Math.random()*200|0)+'px'; }, 80);
+
+/* ── FOLDERS → GALLERY ── */
+const foldersView = document.getElementById('folders');
+const galleryView = document.getElementById('gallery');
+const galleryTitle = document.getElementById('galleryTitle');
+const galleryCount = document.getElementById('galleryCount');
+const backBtn = document.getElementById('backBtn');
+const folders = [...document.querySelectorAll('.folder')];
+const cards = [...document.querySelectorAll('.card')];
+
+function countFor(cat){
+    return cat === 'all' ? cards.length : cards.filter(c => c.dataset.category === cat).length;
+}
+document.querySelectorAll('.folder-count').forEach(el => {
+    const n = countFor(el.dataset.count);
+    el.textContent = n + ' Project' + (n !== 1 ? 's' : '');
+});
+
+function openFolder(cat, label){
+    galleryTitle.textContent = label;
+    let shown = 0;
+    cards.forEach(card => {
+        const show = (cat === 'all') || card.dataset.category === cat;
+        card.style.display = show ? '' : 'none';
+        card.classList.remove('in');
+        if (show) {
+            shown++;
+            const v = card.querySelector('video');
+            if (!v.src && v.dataset.src) v.src = v.dataset.src;
+            v.play().catch(()=>{});
+        } else {
+            card.querySelector('video').pause();
+        }
+    });
+    galleryCount.textContent = shown + ' Project' + (shown !== 1 ? 's' : '');
+    foldersView.classList.add('hidden');
+    galleryView.classList.remove('hidden');
+    window.scrollTo(0, 0);
+    let i = 0;
+    cards.forEach(card => {
+        if (card.style.display !== 'none') {
+            const delay = 80 + (i++) * 60;
+            setTimeout(() => card.classList.add('in'), delay);
+        }
+    });
+}
+
+function showFolders(){
+    cards.forEach(c => c.querySelector('video').pause());
+    galleryView.classList.add('hidden');
+    foldersView.classList.remove('hidden');
+    window.scrollTo(0, 0);
+}
+
+folders.forEach(f => {
+    const go = () => openFolder(f.dataset.cat, f.dataset.label);
+    f.addEventListener('click', go);
+    f.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+});
+backBtn.addEventListener('click', showFolders);
+
+/* ── PAGE TRANSITION OUT — leaving Work for another internal tab ── */
+const wipe = document.getElementById('wipe');
+document.querySelectorAll('nav a[href="index.html"], nav a[href="contact.html"]').forEach(a => {
+    a.addEventListener('click', e => {
+        const href = a.getAttribute('href');
+        e.preventDefault();
+        const view = foldersView.classList.contains('hidden') ? galleryView : foldersView;
+        view.classList.add('leaving');
+        wipe.classList.add('show');
+        setTimeout(() => { location.href = href; }, 470);
+    });
+});
+</script>
+
+</body>
+</html>
