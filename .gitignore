@@ -1,3 +1,6 @@
 .DS_Store
 **/.DS_Store
 .claude/
+
+# Source .mov originals (large); the web-ready .mp4s in work/ are committed instead
+work/new work/

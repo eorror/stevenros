@@ -63,7 +63,7 @@
 
         .card {
             position: absolute; left: 50%; top: 50%;
-            width: 680px; height: 416px;
+            width: 680px; height: 510px;
             will-change: transform, opacity; cursor: pointer;
         }
         .card-inner {
@@ -126,12 +126,20 @@
 <div id="wipe"></div>
 
 <script>
+/* ── REDUCED MOTION ── */
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 /* ── GRAIN ── */
 const grain = document.getElementById('grain');
-setInterval(() => { grain.style.backgroundPosition = (Math.random()*200|0)+'px '+(Math.random()*200|0)+'px'; }, 80);
+if (!REDUCE) setInterval(() => { grain.style.backgroundPosition = (Math.random()*200|0)+'px '+(Math.random()*200|0)+'px'; }, 80);
 
 /* ── VIDEO CAROUSEL ── */
 (function carousel(){
+
+    /* First entry to the site this session vs returning (e.g. back from Work) */
+    let firstVisit = true;
+    try { firstVisit = !sessionStorage.getItem('sr_visited'); sessionStorage.setItem('sr_visited', '1'); } catch (e) {}
+    const FIRST_VISIT = firstVisit;
 
     const VIDEOS = [
         'work/reel one v4.mp4','work/halloween v5.mp4','work/esports v2.mp4','work/pln v1.mp4',
@@ -141,21 +149,27 @@ setInterval(() => { grain.style.backgroundPosition = (Math.random()*200|0)+'px '
         'work/FINAL FINAL fallen angels 2.mp4','work/cocktail night after reel chinese.mp4',
         'work/fully done.mp4','work/raided nz finished.mp4','work/song test.mp4',
         'work/v6772.mp4','work/video 2 v2 .mp4','work/web3 v1.mp4',
+        'work/hackathon v2.mp4','work/esports v3.mp4','work/STEVEN_ROS_AD_SP702.mp4','work/northern rocks v6.mp4','work/omo reel v2.mp4','work/n8 v3.mp4','work/odd even reel v1.mp4',
+        'work/28 cornwall road v3.mp4','work/74a Miller Road v1.mp4',
     ];
     const TITLES = [
-        'Reel One','Halloween','Esports','PLN','ESA vs TANSA','Grog Reel','Infinity Sleep',
-        'Video 1','Raided','Spinning','Logos','Reel 3','ESA vs TANSA','Fallen Angels',
-        'Cocktail Night','Fully Done','Raided NZ','Song Test','V6772','Video 2','Web3',
+        'ESA Camp 1','AESIR Halloween','Esports Interclubs','Project Launch Night','ESA v TANSA : The Heist','Grog','Infinity Sleep',
+        'Cocktail Night — Theme','Raided','ESA Keychain','O-Week Teaser','ESA Camp 2','ESA v TANSA','Fallen Angels',
+        'Cocktail Night','AESIR Halloween','Raided NZ','Tech Mixer','ESA Welcome Video','Cocktail Night — Visuals','Web3 Introduction',
+        'Hackathon','Esports Interclubs','Adidas Spec Ad','Northern Rocks','Omo','N8','Odd Even',
+        '28 Cornwall Road','74a Miller Road',
     ];
     const DATES = [
-        'May 2025','Sep 2025','May 2026','Feb 2026','Mar 2026','Feb 2025','Apr 2025',
+        'May 2025','Sep 2025','Sep 2025','Feb 2026','Mar 2026','Feb 2025','Apr 2025',
         'Aug 2025','Apr 2025','Feb 2026','Mar 2026','May 2025','Mar 2025','Aug 2024',
         'Sep 2024','Sep 2024','Sep 2024','Mar 2026','Feb 2026','Aug 2025','Sep 2024',
+        'Apr 2026','Apr 2026','Apr 2026','May 2026','May 2026','May 2026','May 2026',
+        'Apr 2026','Apr 2026',
     ];
 
     const N         = VIDEOS.length;
     const CARD_W    = 680;
-    const CARD_H    = 416;
+    const CARD_H    = 510;   /* 4:3 — matches the source footage so nothing is cropped */
     const SPACING   = 610;
     const SIDE_SCALE= 0.82;
     const SIDE_DIM  = 0.42;
@@ -180,7 +194,15 @@ setInterval(() => { grain.style.backgroundPosition = (Math.random()*200|0)+'px '
         clipTitle.innerHTML =
             `<span class="ct-name">${TITLES[i] || ''}</span>` +
             `<span class="ct-date">${DATES[i] || ''}</span>`;
-        clipTitle.style.opacity = '1';
+        if (REDUCE) { clipTitle.style.opacity = '1'; return; }
+        clipTitle.style.transition = 'none';
+        clipTitle.style.opacity = '0';
+        clipTitle.style.transform = 'translateX(-50%) translateY(9px)';
+        requestAnimationFrame(() => {
+            clipTitle.style.transition = 'opacity 0.35s ease, transform 0.4s cubic-bezier(.22,1,.36,1)';
+            clipTitle.style.opacity = '1';
+            clipTitle.style.transform = 'translateX(-50%) translateY(0)';
+        });
     }
 
     /* Build cards */
@@ -206,8 +228,13 @@ setInterval(() => { grain.style.backgroundPosition = (Math.random()*200|0)+'px '
         inner.appendChild(vid);
         outer.appendChild(inner);
         stage.appendChild(outer);
-        return { outer, inner, vid, loaded: false };
+        return { outer, inner, vid, loaded: false, hover: 0, hoverTarget: 0 };
     });
+
+    /* Returning visitors: hide cards up-front so they can slide in (avoids a flash before entrance) */
+    if (!FIRST_VISIT && !REDUCE) {
+        cards.forEach(c => { c.inner.style.opacity = '0'; c.inner.style.transform = 'translateY(48px)'; });
+    }
 
     function loadCard(i){
         const c = cards[i];
@@ -230,7 +257,7 @@ setInterval(() => { grain.style.backgroundPosition = (Math.random()*200|0)+'px '
     let phase      = 'intro';
     let pos        = 0;
     let posTarget  = 0;
-    let stageScale = fillZoom();
+    let stageScale = (FIRST_VISIT && !REDUCE) ? fillZoom() : 1;
     let zoomFrom   = stageScale;
     let zoomT0     = 0;
     let zoomDur    = ZOOM_MS;
@@ -252,10 +279,18 @@ setInterval(() => { grain.style.backgroundPosition = (Math.random()*200|0)+'px '
             const x  = d * SPACING;
             let scale  = 1 - (1 - SIDE_SCALE) * Math.min(ad, 1);
             if (ad < 0.5) scale *= stageScale;     /* intro zoom — centre clip only */
-            const bright = 1 - (1 - SIDE_DIM) * Math.min(ad, 1);
+            let bright = 1 - (1 - SIDE_DIM) * Math.min(ad, 1);
             const visible = ad <= VISIBLE + 0.5;
 
-            c.outer.style.transform = `translate(-50%,-50%) translateX(${x.toFixed(1)}px) scale(${scale.toFixed(3)})`;
+            /* hover affordance — only on side clips, lift + brighten */
+            c.hover += (c.hoverTarget - c.hover) * 0.18;
+            if (c.hover > 0.001 && ad >= 0.5) {
+                scale  *= 1 + 0.05 * c.hover;
+                bright += (1 - bright) * 0.55 * c.hover;
+            }
+            const lift = ad >= 0.5 ? -14 * c.hover : 0;
+
+            c.outer.style.transform = `translate(-50%,-50%) translateX(${x.toFixed(1)}px) translateY(${lift.toFixed(1)}px) scale(${scale.toFixed(3)})`;
             c.outer.style.opacity   = visible ? '1' : '0';
             c.outer.style.zIndex    = String(Math.round(100 - ad * 10));
             c.inner.style.filter    = `brightness(${bright.toFixed(3)})`;
@@ -300,10 +335,45 @@ setInterval(() => { grain.style.backgroundPosition = (Math.random()*200|0)+'px '
         for (let i = EAGER; i < N; i++) setTimeout(() => loadCard(i), (i - EAGER) * 180);
     }
 
+    /* Returning within the session (back from Work/Contact) — skip the montage */
+    function instantEntrance(){
+        stageScale = 1; zooming = false;
+        pos = posTarget = 0;
+        nameEl.style.opacity = '1';
+        nav.style.opacity = '1';
+        finishIntro();
+    }
+    function slideInEntrance(){
+        stageScale = 1; zooming = false;
+        pos = posTarget = 0;
+        nameEl.style.opacity = '1';
+        nav.style.opacity = '1';
+        finishIntro();
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            cards.forEach((c, i) => {
+                const ad = Math.abs(delta(i));
+                if (ad > VISIBLE + 0.5) {      /* off-screen cards: reset, no animation */
+                    c.inner.style.transition = '';
+                    c.inner.style.opacity = '';
+                    c.inner.style.transform = '';
+                    return;
+                }
+                const delay = Math.min(ad, 3) * 85;   /* centre first, neighbours follow */
+                c.inner.style.transition = `transform 0.8s cubic-bezier(.22,1,.36,1) ${delay}ms, opacity 0.55s ease ${delay}ms`;
+                c.inner.style.opacity = '1';
+                c.inner.style.transform = 'translateY(0)';
+            });
+        }));
+    }
+
     let started = false;
     function beginMontage(){
         if (started) return;
         started = true;
+
+        if (REDUCE)       { instantEntrance(); return; }
+        if (!FIRST_VISIT) { slideInEntrance(); return; }
+
         stageScale = fillZoom();
 
         const order = shuffle([...Array(EAGER).keys()]);
@@ -356,6 +426,8 @@ setInterval(() => { grain.style.backgroundPosition = (Math.random()*200|0)+'px '
             if (phase !== 'live') return;
             posTarget = pos + delta(i);
         });
+        c.outer.addEventListener('mouseenter', () => { if (phase === 'live') c.hoverTarget = 1; });
+        c.outer.addEventListener('mouseleave', () => { c.hoverTarget = 0; });
     });
 
     /* ── PAGE TRANSITION OUT — blocks fly into 3 clusters, then wipe to Work ── */

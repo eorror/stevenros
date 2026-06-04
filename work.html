@@ -71,6 +71,7 @@
         .folder:nth-child(1) { animation-delay: 0.12s; }
         .folder:nth-child(2) { animation-delay: 0.26s; }
         .folder:nth-child(3) { animation-delay: 0.40s; }
+        .folder:nth-child(4) { animation-delay: 0.54s; }
         @keyframes folderIn {
             from { opacity: 0; transform: scale(0.2) translateY(40px); }
             to   { opacity: 1; transform: scale(1) translateY(0); }
@@ -136,7 +137,7 @@
 
         .work-grid { position: relative; z-index: 10; display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; padding: 0 44px; }
 
-        .card { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 10px; display: block; text-decoration: none; opacity: 0; transform: translateY(24px); transition: transform 0.5s cubic-bezier(.22,1,.36,1), opacity 0.4s ease; will-change: transform, opacity; }
+        .card { position: relative; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 10px; display: block; text-decoration: none; opacity: 0; transform: translateY(24px); transition: transform 0.5s cubic-bezier(.22,1,.36,1), opacity 0.4s ease; will-change: transform, opacity; }
         .card.in { opacity: 1; transform: translateY(0); }
         .card:hover { transform: scale(1.012); }
         .card-video { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.6s cubic-bezier(.22,1,.36,1); }
@@ -148,6 +149,44 @@
         .card:hover .card-title { transform: translateY(0); }
         .card-meta { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 400; color: rgba(255,255,255,0.55); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 4px; transform: translateY(6px); transition: transform 0.35s 0.04s cubic-bezier(.22,1,.36,1); }
         .card:hover .card-meta { transform: translateY(0); }
+
+        /* ---- YouTube cards (thumbnail + play badge) ---- */
+        .card-thumb { width: 100%; height: 100%; object-fit: cover; display: block; background: #111; transition: transform 0.6s cubic-bezier(.22,1,.36,1); }
+        .card:hover .card-thumb { transform: scale(1.04); }
+        .play-badge {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 60px; height: 60px; border-radius: 50%;
+            background: rgba(10,8,6,0.42); border: 1px solid rgba(255,255,255,0.55);
+            -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+            display: flex; align-items: center; justify-content: center; z-index: 3; pointer-events: none;
+            transition: transform 0.35s cubic-bezier(.22,1,.36,1), background 0.3s ease, border-color 0.3s ease;
+        }
+        .card:hover .play-badge { transform: translate(-50%, -50%) scale(1.1); background: rgba(204,17,17,0.88); border-color: rgba(204,17,17,0.9); }
+        .play-badge svg { width: 21px; height: 21px; margin-left: 3px; fill: #fff; }
+
+        /* ---- Lightbox player ---- */
+        #lightbox {
+            position: fixed; inset: 0; z-index: 600;
+            display: flex; align-items: center; justify-content: center; padding: 6vmin;
+            background: rgba(10,8,6,0.88); opacity: 0; pointer-events: none;
+            transition: opacity 0.35s ease;
+        }
+        #lightbox.open { opacity: 1; pointer-events: auto; }
+        .lb-frame {
+            position: relative; width: min(1040px, 92vw); aspect-ratio: 16 / 9;
+            background: #000; box-shadow: 0 30px 90px rgba(0,0,0,0.55);
+            transform: scale(0.95); transition: transform 0.4s cubic-bezier(.22,1,.36,1);
+        }
+        #lightbox.open .lb-frame { transform: scale(1); }
+        .lb-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+        .lb-close {
+            position: absolute; top: -42px; right: 0; background: none; border: none; cursor: pointer;
+            color: #fff; opacity: 0.72; transition: opacity 0.2s ease;
+            display: inline-flex; align-items: center; gap: 9px;
+            font-family: 'Inter', sans-serif; font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase;
+        }
+        .lb-close:hover { opacity: 1; }
+        .lb-close svg { width: 18px; height: 18px; stroke: #fff; }
 
         footer { position: relative; z-index: 10; margin-top: 80px; padding: 48px 44px 52px; border-top: 1px solid rgba(28,24,20,0.10); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 32px; }
         .footer-contact { display: flex; flex-direction: column; gap: 10px; }
@@ -163,6 +202,15 @@
         .footer-copy { font-family: 'Inter', sans-serif; font-size: 0.68rem; color: #1C1814; opacity: 0.28; letter-spacing: 0.04em; }
 
         @media (max-width: 720px) { .work-grid { grid-template-columns: 1fr; } }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.001ms !important;
+                animation-delay: 0ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.001ms !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -216,6 +264,17 @@
         <div class="folder-label">Films<span class="folder-count" data-count="films"></span></div>
     </div>
 
+    <div class="folder" data-cat="realestate" data-label="Real Estate" tabindex="0" role="button" aria-label="Open Real Estate">
+        <div class="folder-vis">
+            <div class="folder-back"></div>
+            <div class="peek p1"><video src="work/28 cornwall road v3.mp4" muted loop playsinline autoplay></video></div>
+            <div class="peek p2"><video src="work/74a Miller Road v1.mp4" muted loop playsinline autoplay></video></div>
+            <div class="peek p3"><video src="work/4 lidcombe place v6.mp4" muted loop playsinline autoplay></video></div>
+            <div class="folder-front"></div>
+        </div>
+        <div class="folder-label">Real Estate<span class="folder-count" data-count="realestate"></span></div>
+    </div>
+
     <div class="folder" data-cat="all" data-label="All Work" tabindex="0" role="button" aria-label="Open All Work">
         <div class="folder-vis">
             <div class="folder-back"></div>
@@ -238,6 +297,43 @@
     </header>
 
     <section class="work-grid" id="workGrid">
+        <!-- ===== YouTube cards — opens in on-site lightbox ===== -->
+        <a class="card yt" href="https://youtu.be/KudLXbMgTF8" target="_blank" rel="noopener" data-category="films" data-yt="KudLXbMgTF8">
+            <img class="card-thumb" loading="lazy" alt="Offbeat — short film" src="https://i.ytimg.com/vi/KudLXbMgTF8/hqdefault.jpg">
+            <div class="play-badge"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+            <div class="overlay"><div class="card-title">Offbeat</div><div class="card-meta">Short Film</div></div>
+        </a>
+
+        <!-- ===== New work (2026) ===== -->
+        <a class="card" href="work/odd even reel v1.mp4" target="_blank" data-category="reels">
+            <video class="card-video" data-src="work/odd even reel v1.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">Odd Even</div><div class="card-meta">2026 &nbsp;·&nbsp; Reel</div></div>
+        </a>
+        <a class="card" href="work/n8 v3.mp4" target="_blank" data-category="reels">
+            <video class="card-video" data-src="work/n8 v3.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">N8</div><div class="card-meta">2026 &nbsp;·&nbsp; Reel</div></div>
+        </a>
+        <a class="card" href="work/omo reel v2.mp4" target="_blank" data-category="reels">
+            <video class="card-video" data-src="work/omo reel v2.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">Omo</div><div class="card-meta">2026 &nbsp;·&nbsp; Reel</div></div>
+        </a>
+        <a class="card" href="work/northern rocks v6.mp4" target="_blank" data-category="reels">
+            <video class="card-video" data-src="work/northern rocks v6.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">Northern Rocks</div><div class="card-meta">2026 &nbsp;·&nbsp; Reel</div></div>
+        </a>
+        <a class="card" href="work/STEVEN_ROS_AD_SP702.mp4" target="_blank" data-category="reels">
+            <video class="card-video" data-src="work/STEVEN_ROS_AD_SP702.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">Adidas Spec Ad</div><div class="card-meta">2026 &nbsp;·&nbsp; Reel</div></div>
+        </a>
+        <a class="card" href="work/esports v3.mp4" target="_blank" data-category="reels">
+            <video class="card-video" data-src="work/esports v3.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">Esports Interclubs</div><div class="card-meta">2026 &nbsp;·&nbsp; Reel</div></div>
+        </a>
+        <a class="card" href="work/hackathon v2.mp4" target="_blank" data-category="reels">
+            <video class="card-video" data-src="work/hackathon v2.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">Hackathon</div><div class="card-meta">2026 &nbsp;·&nbsp; Reel</div></div>
+        </a>
+
         <a class="card" href="work/ESA V TANSA V1.MP4" target="_blank" data-category="films">
             <video class="card-video" data-src="work/ESA V TANSA V1.MP4" muted loop playsinline></video>
             <div class="overlay"><div class="card-title">ESA v TANSA : The Heist</div><div class="card-meta">2026 &nbsp;·&nbsp; Film</div></div>
@@ -257,6 +353,10 @@
         <a class="card" href="work/spinning v2.mp4" target="_blank" data-category="reels">
             <video class="card-video" data-src="work/spinning v2.mp4" muted loop playsinline></video>
             <div class="overlay"><div class="card-title">ESA Keychain</div><div class="card-meta">2026 &nbsp;·&nbsp; Reel</div></div>
+        </a>
+        <a class="card" href="work/logos card v2.mp4" target="_blank" data-category="reels">
+            <video class="card-video" data-src="work/logos card v2.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">O-Week Teaser</div><div class="card-meta">2026 &nbsp;·&nbsp; Reel</div></div>
         </a>
         <a class="card" href="work/halloween v5.mp4" target="_blank" data-category="reels">
             <video class="card-video" data-src="work/halloween v5.mp4" muted loop playsinline></video>
@@ -314,8 +414,40 @@
             <video class="card-video" data-src="work/FINAL FINAL fallen angels 2.mp4" muted loop playsinline></video>
             <div class="overlay"><div class="card-title">Fallen Angels</div><div class="card-meta">2024 &nbsp;·&nbsp; Film</div></div>
         </a>
+
+        <!-- ===== Real Estate (2026) ===== -->
+        <a class="card" href="work/28 cornwall road v3.mp4" target="_blank" data-category="realestate">
+            <video class="card-video" data-src="work/28 cornwall road v3.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">28 Cornwall Road</div><div class="card-meta">2026 &nbsp;·&nbsp; Real Estate</div></div>
+        </a>
+        <a class="card" href="work/74a Miller Road v1.mp4" target="_blank" data-category="realestate">
+            <video class="card-video" data-src="work/74a Miller Road v1.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">74a Miller Road</div><div class="card-meta">2026 &nbsp;·&nbsp; Real Estate</div></div>
+        </a>
+        <a class="card" href="work/239 Porchester Road v3.mp4" target="_blank" data-category="realestate">
+            <video class="card-video" data-src="work/239 Porchester Road v3.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">239 Porchester Road</div><div class="card-meta">2026 &nbsp;·&nbsp; Real Estate</div></div>
+        </a>
+        <a class="card" href="work/10 shandon street v4.mp4" target="_blank" data-category="realestate">
+            <video class="card-video" data-src="work/10 shandon street v4.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">10 Shandon Street</div><div class="card-meta">2026 &nbsp;·&nbsp; Real Estate</div></div>
+        </a>
+        <a class="card" href="work/4 lidcombe place v6.mp4" target="_blank" data-category="realestate">
+            <video class="card-video" data-src="work/4 lidcombe place v6.mp4" muted loop playsinline></video>
+            <div class="overlay"><div class="card-title">4 Lidcombe Place</div><div class="card-meta">2026 &nbsp;·&nbsp; Real Estate</div></div>
+        </a>
     </section>
 </section>
+
+<!-- ============ LIGHTBOX ============ -->
+<div id="lightbox" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Video player">
+    <div class="lb-frame">
+        <button class="lb-close" id="lbClose" aria-label="Close video">Close
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+        </button>
+        <iframe id="lbIframe" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen title="Video player"></iframe>
+    </div>
+</div>
 
 <footer>
     <div class="footer-contact">
@@ -339,9 +471,12 @@
 </footer>
 
 <script>
+/* Mark that the visitor has entered the site this session (Home uses this to skip its intro) */
+try { sessionStorage.setItem('sr_visited', '1'); } catch (e) {}
+
 /* ── GRAIN ── */
 const grain = document.getElementById('grain');
-setInterval(() => { grain.style.backgroundPosition = (Math.random()*200|0)+'px '+(Math.random()*200|0)+'px'; }, 80);
+if (!matchMedia('(prefers-reduced-motion: reduce)').matches) setInterval(() => { grain.style.backgroundPosition = (Math.random()*200|0)+'px '+(Math.random()*200|0)+'px'; }, 80);
 
 /* ── FOLDERS → GALLERY ── */
 const foldersView = document.getElementById('folders');
@@ -367,13 +502,15 @@ function openFolder(cat, label){
         const show = (cat === 'all') || card.dataset.category === cat;
         card.style.display = show ? '' : 'none';
         card.classList.remove('in');
+        const v = card.querySelector('video');
         if (show) {
             shown++;
-            const v = card.querySelector('video');
-            if (!v.src && v.dataset.src) v.src = v.dataset.src;
-            v.play().catch(()=>{});
-        } else {
-            card.querySelector('video').pause();
+            if (v) {
+                if (!v.src && v.dataset.src) v.src = v.dataset.src;
+                v.play().catch(()=>{});
+            }
+        } else if (v) {
+            v.pause();
         }
     });
     galleryCount.textContent = shown + ' Project' + (shown !== 1 ? 's' : '');
@@ -390,11 +527,49 @@ function openFolder(cat, label){
 }
 
 function showFolders(){
-    cards.forEach(c => c.querySelector('video').pause());
+    cards.forEach(c => { const v = c.querySelector('video'); if (v) v.pause(); });
     galleryView.classList.add('hidden');
     foldersView.classList.remove('hidden');
     window.scrollTo(0, 0);
 }
+
+/* ── YOUTUBE LIGHTBOX ── */
+const lightbox = document.getElementById('lightbox');
+const lbIframe = document.getElementById('lbIframe');
+const lbClose = document.getElementById('lbClose');
+
+function openLightbox(id){
+    lbIframe.src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
+    lightbox.classList.add('open');
+    lightbox.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+}
+function closeLightbox(){
+    lightbox.classList.remove('open');
+    lightbox.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    lbIframe.src = '';            /* stop playback + audio */
+}
+
+document.querySelectorAll('.card.yt').forEach(card => {
+    card.addEventListener('click', e => {
+        e.preventDefault();       /* fall back to href (youtu.be) only if JS is off */
+        openLightbox(card.dataset.yt);
+    });
+
+    /* Thumbnail: hqdefault always works; upgrade to maxres ONLY if it truly exists.
+       (YouTube serves a 120x90 grey placeholder for missing maxres, so validate dimensions.) */
+    const img = card.querySelector('.card-thumb');
+    const id = card.dataset.yt;
+    if (img && id) {
+        const probe = new Image();
+        probe.onload = () => { if (probe.naturalWidth > 120) img.src = probe.src; };
+        probe.src = `https://i.ytimg.com/vi/${id}/maxresdefault.jpg`;
+    }
+});
+lbClose.addEventListener('click', closeLightbox);
+lightbox.addEventListener('click', e => { if (e.target === lightbox) closeLightbox(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && lightbox.classList.contains('open')) closeLightbox(); });
 
 folders.forEach(f => {
     const go = () => openFolder(f.dataset.cat, f.dataset.label);

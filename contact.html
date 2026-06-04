@@ -297,8 +297,16 @@
         }
 
         /* =============================================
-           CUSTOM CURSOR
+           REDUCED MOTION
         ============================================= */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.001ms !important;
+                animation-delay: 0ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.001ms !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -397,13 +405,17 @@
 </footer>
 
 <script>
+/* Mark that the visitor has entered the site this session (Home uses this to skip its intro) */
+try { sessionStorage.setItem('sr_visited', '1'); } catch (e) {}
 
 /* ---- ANIMATED GRAIN ---- */
 const grain = document.getElementById('grain');
-setInterval(() => {
-    grain.style.backgroundPosition =
-        (Math.random() * 200 | 0) + 'px ' + (Math.random() * 200 | 0) + 'px';
-}, 80);
+if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    setInterval(() => {
+        grain.style.backgroundPosition =
+            (Math.random() * 200 | 0) + 'px ' + (Math.random() * 200 | 0) + 'px';
+    }, 80);
+}
 </script>
 
 </body>
