@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Buzz First</title>
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
   :root {
@@ -105,6 +105,7 @@
 <section id="view-home" class="active">
   <h1>🔴 Buzz First</h1>
   <p class="tagline">The fastest finger wins. No arguments.</p>
+  <p class="error" id="homeError"></p>
   <button class="btn primary" id="hostBtn">Host a game</button>
   <button class="btn" id="joinShowBtn">Join with a code</button>
 </section>
@@ -149,39 +150,53 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const PREFIX = 'buzzfirst-room-';
+const TOPIC_ROOT = 'buzzfirst';
 const LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // no I/O — avoids confusion
 
-// STUN finds a direct path; TURN relays traffic when phones are on cellular
-// or on wifi with client isolation, where direct connections are blocked.
-const PEER_OPTS = {
-  debug: 1,
-  config: {
-    iceServers: [
-      { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
-      { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-      { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-      { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
-    ],
-  },
-};
-
-// Keep phone screens awake during the game — a sleeping host kills the room.
-async function keepAwake() {
-  try {
-    if (!navigator.wakeLock) return;
-    keepAwake.lock = await navigator.wakeLock.request('screen');
-    document.addEventListener('visibilitychange', async () => {
-      if (document.visibilityState === 'visible' && keepAwake.lock?.released !== false) {
-        try { keepAwake.lock = await navigator.wakeLock.request('screen'); } catch (e) {}
-      }
-    });
-  } catch (e) { /* not supported or denied — fine */ }
-}
+// All game traffic goes through a public MQTT broker over secure websockets.
+// Every device only makes an outbound connection — no device-to-device
+// networking — so it works on any wifi or cellular network that can load
+// this page. If the first broker is down, the next one is tried.
+const BROKERS = [
+  'wss://broker.emqx.io:8084/mqtt',
+  'wss://broker.hivemq.com:8884/mqtt',
+  'wss://test.mosquitto.org:8081',
+];
 
 function showView(id) {
   document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
   $(id).classList.add('active');
+}
+
+function randomId() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+function connectBroker(will) {
+  return new Promise((resolve, reject) => {
+    let i = 0;
+    const tryNext = () => {
+      if (i >= BROKERS.length) return reject(new Error('all-brokers-failed'));
+      const client = mqtt.connect(BROKERS[i++], {
+        keepalive: 15,
+        connectTimeout: 5000,
+        reconnectPeriod: 1500,
+        clean: true,
+        will: will || undefined,
+      });
+      let settled = false, moved = false;
+      const giveUp = () => {
+        if (settled || moved) return;
+        moved = true;
+        client.end(true);
+        tryNext();
+      };
+      client.once('connect', () => { settled = true; resolve(client); });
+      client.once('error', giveUp);
+      setTimeout(giveUp, 6000);
+    };
+    tryNext();
+  });
 }
 
 function beep(freq = 880, dur = 0.15) {
@@ -196,75 +211,95 @@ function beep(freq = 880, dur = 0.15) {
   } catch (e) { /* audio blocked until user gesture — fine */ }
 }
 
+// Keep phone screens awake during the game — a sleeping host kills the room.
+async function keepAwake() {
+  try {
+    if (!navigator.wakeLock) return;
+    keepAwake.lock = await navigator.wakeLock.request('screen');
+    document.addEventListener('visibilitychange', async () => {
+      if (document.visibilityState === 'visible' && keepAwake.lock?.released !== false) {
+        try { keepAwake.lock = await navigator.wakeLock.request('screen'); } catch (e) {}
+      }
+    });
+  } catch (e) { /* not supported or denied — fine */ }
+}
+
 /* ---------------- HOST ---------------- */
 const host = {
-  peer: null,
-  conns: new Map(),   // peerId -> { conn, name }
-  buzzes: [],         // { name, elapsed }
-  phase: 'lobby',     // lobby | armed
+  client: null,
+  code: '',
+  base: '',
+  players: new Map(),  // pid -> { name }
+  buzzes: [],          // { pid, name, elapsed }
+  phase: 'lobby',      // lobby | armed
 
-  start() {
-    const code = Array.from({length: 4}, () => LETTERS[Math.floor(Math.random() * LETTERS.length)]).join('');
-    this.peer = new Peer(PREFIX + code, PEER_OPTS);
+  async start() {
+    $('hostBtn').disabled = true;
+    $('homeError').textContent = '';
+    this.code = Array.from({length: 4}, () => LETTERS[Math.floor(Math.random() * LETTERS.length)]).join('');
+    this.base = TOPIC_ROOT + '/' + this.code;
 
-    this.peer.on('open', () => {
-      $('roomCode').textContent = code;
-      const url = location.origin + location.pathname + '?room=' + code;
-      $('qr').innerHTML = '';
-      new QRCode($('qr'), { text: url, width: 168, height: 168, correctLevel: QRCode.CorrectLevel.M });
-      showView('view-host');
-      keepAwake();
+    try {
+      // Last-will lets players find out if the host device drops off abruptly.
+      this.client = await connectBroker({
+        topic: this.base + '/h2c',
+        payload: JSON.stringify({ type: 'host-gone' }),
+        qos: 0,
+        retain: false,
+      });
+    } catch (e) {
+      $('hostBtn').disabled = false;
+      $('homeError').textContent = 'Can’t reach the game server. Check your internet connection and try again.';
+      return;
+    }
+
+    this.client.subscribe(this.base + '/c2h/+', { qos: 1 });
+    this.client.on('message', (topic, payload) => {
+      const prefix = this.base + '/c2h/';
+      if (!topic.startsWith(prefix)) return;
+      let msg;
+      try { msg = JSON.parse(payload.toString()); } catch (e) { return; }
+      this.onMessage(topic.slice(prefix.length), msg);
     });
 
-    this.peer.on('error', err => {
-      if (err.type === 'unavailable-id') this.start(); // code collision — roll a new one
-      else $('hostStatus').textContent = 'Connection error: ' + err.type;
-    });
-
-    // If the signaling link drops (screen briefly off, network blip), restore it
-    // so new players can still join. Existing data connections are unaffected.
-    this.peer.on('disconnected', () => { if (!this.peer.destroyed) this.peer.reconnect(); });
-
-    this.peer.on('connection', conn => {
-      conn.on('data', msg => this.onMessage(conn, msg));
-      conn.on('close', () => this.dropPlayer(conn.peer));
-      conn.on('error', () => this.dropPlayer(conn.peer));
-    });
+    $('roomCode').textContent = this.code;
+    const url = location.origin + location.pathname + '?room=' + this.code;
+    $('qr').innerHTML = '';
+    new QRCode($('qr'), { text: url, width: 168, height: 168, correctLevel: QRCode.CorrectLevel.M });
+    showView('view-host');
+    keepAwake();
   },
 
-  onMessage(conn, msg) {
+  onMessage(pid, msg) {
     if (msg.type === 'join') {
-      this.conns.set(conn.peer, { conn, name: String(msg.name).slice(0, 16) });
-      conn.send({ type: 'joined', phase: this.phase });
+      this.players.set(pid, { name: String(msg.name).slice(0, 16) });
+      this.send(pid, { type: 'joined', phase: this.phase });
       this.renderPlayers();
+    } else if (msg.type === 'leave') {
+      if (this.players.delete(pid)) this.renderPlayers();
     } else if (msg.type === 'buzz' && this.phase === 'armed') {
-      const p = this.conns.get(conn.peer);
-      if (!p || this.buzzes.some(b => b.peer === conn.peer)) return; // one buzz per round
-      this.buzzes.push({ peer: conn.peer, name: p.name, elapsed: msg.elapsed });
+      const p = this.players.get(pid);
+      if (!p || this.buzzes.some(b => b.pid === pid)) return; // one buzz per round
+      this.buzzes.push({ pid, name: p.name, elapsed: msg.elapsed });
       this.buzzes.sort((a, b) => a.elapsed - b.elapsed);
       beep(this.buzzes.length === 1 ? 1050 : 700);
       this.renderResults();
-      this.broadcastStandings();
+      this.broadcast({ type: 'standings', order: this.buzzes.map(b => ({ pid: b.pid, name: b.name, elapsed: b.elapsed })) });
     }
   },
 
-  dropPlayer(peerId) {
-    if (this.conns.delete(peerId)) this.renderPlayers();
+  send(pid, msg) {
+    this.client.publish(this.base + '/h2c/' + pid, JSON.stringify(msg), { qos: 1 });
   },
 
   broadcast(msg) {
-    this.conns.forEach(({ conn }) => { if (conn.open) conn.send(msg); });
-  },
-
-  broadcastStandings() {
-    this.broadcast({ type: 'standings', order: this.buzzes.map(b => ({ peer: b.peer, name: b.name, elapsed: b.elapsed })) });
+    this.client.publish(this.base + '/h2c', JSON.stringify(msg), { qos: 1 });
   },
 
   arm() {
     this.phase = 'armed';
     this.buzzes = [];
     this.renderResults();
-    this.renderPlayers();
     this.broadcast({ type: 'armed' });
     $('hostStatus').textContent = 'GO! Waiting for buzzes…';
     $('hostStatus').classList.add('armed');
@@ -277,7 +312,6 @@ const host = {
     this.buzzes = [];
     this.broadcast({ type: 'reset' });
     this.renderResults();
-    this.renderPlayers();
     $('hostStatus').textContent = 'Ready when you are.';
     $('hostStatus').classList.remove('armed');
     $('armBtn').style.display = 'block';
@@ -287,17 +321,17 @@ const host = {
   renderPlayers() {
     const chips = $('playerChips');
     chips.innerHTML = '';
-    this.conns.forEach(({ name }, peerId) => {
+    this.players.forEach(({ name }, pid) => {
       const el = document.createElement('span');
-      el.className = 'chip' + (this.buzzes.some(b => b.peer === peerId) ? ' buzzed' : '');
+      el.className = 'chip' + (this.buzzes.some(b => b.pid === pid) ? ' buzzed' : '');
       el.textContent = name;
       chips.appendChild(el);
     });
-    $('armBtn').disabled = this.conns.size === 0;
+    $('armBtn').disabled = this.players.size === 0;
     if (this.phase === 'lobby') {
-      $('hostStatus').textContent = this.conns.size === 0
+      $('hostStatus').textContent = this.players.size === 0
         ? 'Waiting for players to join…'
-        : this.conns.size + ' player' + (this.conns.size > 1 ? 's' : '') + ' in. Ready when you are.';
+        : this.players.size + ' player' + (this.players.size > 1 ? 's' : '') + ' in. Ready when you are.';
     }
   },
 
@@ -313,49 +347,53 @@ const host = {
 
 /* ---------------- PLAYER ---------------- */
 const player = {
-  peer: null,
-  conn: null,
+  client: null,
+  pid: '',
+  base: '',
+  name: '',
+  joined: false,
   armedAt: null,
   buzzed: false,
 
-  join(code, name) {
-    this.progress('Contacting server…');
+  async join(code, name) {
+    this.progress('Connecting to game server…');
     $('joinBtn').disabled = true;
+    this.pid = randomId();
     this.name = name;
-    this.peer = new Peer(PEER_OPTS);
-    const timeout = setTimeout(() =>
-      this.fail('Couldn’t reach the host. Double-check the code — and joining works best when everyone is on the same wifi.'), 15000);
+    this.base = TOPIC_ROOT + '/' + code;
 
-    this.peer.on('open', () => {
-      this.progress('Connecting to host…');
-      this.conn = this.peer.connect(PREFIX + code, { reliable: true });
+    try {
+      // Last-will removes this player from the host's list if the phone drops off.
+      this.client = await connectBroker({
+        topic: this.base + '/c2h/' + this.pid,
+        payload: JSON.stringify({ type: 'leave' }),
+        qos: 0,
+        retain: false,
+      });
+    } catch (e) {
+      return this.fail('Can’t reach the game server. Check your internet connection and try again.');
+    }
 
-      this.conn.on('open', () => {
-        this.progress('Joining room…');
-        this.conn.send({ type: 'join', name });
-      });
-      this.conn.on('data', msg => {
-        if (msg.type === 'joined') {
-          clearTimeout(timeout);
-          $('playerInfo').textContent = name + ' · room ' + code;
-          showView('view-player');
-          keepAwake();
-        }
-        this.onMessage(msg);
-      });
-      this.conn.on('close', () => {
-        $('playerStatus').textContent = 'Disconnected from host.';
-        this.setButton('wait');
-      });
-      this.conn.on('error', err => this.fail('Connection failed: ' + (err.type || err.message || err)));
+    this.progress('Looking for the room…');
+    this.client.subscribe([this.base + '/h2c', this.base + '/h2c/' + this.pid], { qos: 1 });
+    const timeout = setTimeout(() => {
+      if (!this.joined) this.fail('Room not found. Check the code — the room closes when the host leaves the page.');
+    }, 10000);
+
+    this.client.on('message', (topic, payload) => {
+      let msg;
+      try { msg = JSON.parse(payload.toString()); } catch (e) { return; }
+      if (msg.type === 'joined' && !this.joined) {
+        this.joined = true;
+        clearTimeout(timeout);
+        $('playerInfo').textContent = name + ' · room ' + code;
+        showView('view-player');
+        keepAwake();
+      }
+      this.onMessage(msg);
     });
-    this.peer.on('error', err => {
-      clearTimeout(timeout);
-      if (err.type === 'peer-unavailable') this.fail('Room not found. Check the code — the room closes when the host leaves the page.');
-      else if (err.type === 'network' || err.type === 'server-error') this.fail('Can’t reach the signaling server. Check your internet connection and try again.');
-      else this.fail('Connection error: ' + err.type);
-    });
-    this.peer.on('disconnected', () => { if (this.peer && !this.peer.destroyed) this.peer.reconnect(); });
+
+    this.send({ type: 'join', name });
   },
 
   progress(text) {
@@ -369,7 +407,12 @@ const player = {
     el.style.color = '';
     el.textContent = text;
     $('joinBtn').disabled = false;
-    if (this.peer) { this.peer.destroy(); this.peer = null; }
+    this.joined = false;
+    if (this.client) { this.client.end(true); this.client = null; }
+  },
+
+  send(msg) {
+    this.client.publish(this.base + '/c2h/' + this.pid, JSON.stringify(msg), { qos: 1 });
   },
 
   onMessage(msg) {
@@ -387,13 +430,17 @@ const player = {
       this.setButton('wait');
       $('playerStatus').textContent = 'Waiting for the host to start.';
     } else if (msg.type === 'standings' && this.buzzed) {
-      const idx = msg.order.findIndex(o => o.peer === this.peer.id);
+      const idx = msg.order.findIndex(o => o.pid === this.pid);
       if (idx >= 0) {
         const medals = ['🥇 First!', '🥈 2nd', '🥉 3rd'];
         $('playerResult').innerHTML = (medals[idx] || '#' + (idx + 1)) +
           `<small>${Math.round(msg.order[idx].elapsed)}ms reaction</small>`;
         $('playerResult').style.display = 'block';
       }
+    } else if (msg.type === 'host-gone') {
+      this.armedAt = null;
+      this.setButton('wait');
+      $('playerStatus').textContent = 'The host left the room.';
     }
   },
 
@@ -401,7 +448,7 @@ const player = {
     if (this.armedAt === null || this.buzzed) return;
     const elapsed = performance.now() - this.armedAt;
     this.buzzed = true;
-    this.conn.send({ type: 'buzz', elapsed });
+    this.send({ type: 'buzz', elapsed });
     this.setButton('buzzed');
     beep(1050, 0.2);
   },
@@ -428,6 +475,14 @@ $('joinBtn').onclick = () => {
 $('armBtn').onclick = () => host.arm();
 $('resetBtn').onclick = () => host.reset();
 $('buzzBtn').addEventListener('pointerdown', () => player.buzz());
+
+// Tell the room when this device leaves the page gracefully.
+window.addEventListener('pagehide', () => {
+  try {
+    if (player.client && player.joined) { player.send({ type: 'leave' }); player.client.end(); }
+    if (host.client) { host.broadcast({ type: 'host-gone' }); host.client.end(); }
+  } catch (e) {}
+});
 
 // Deep link: ?room=ABCD pre-fills the join form
 const roomParam = new URLSearchParams(location.search).get('room');
