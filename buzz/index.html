@@ -152,6 +152,33 @@ const $ = id => document.getElementById(id);
 const PREFIX = 'buzzfirst-room-';
 const LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // no I/O — avoids confusion
 
+// STUN finds a direct path; TURN relays traffic when phones are on cellular
+// or on wifi with client isolation, where direct connections are blocked.
+const PEER_OPTS = {
+  debug: 1,
+  config: {
+    iceServers: [
+      { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
+      { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+    ],
+  },
+};
+
+// Keep phone screens awake during the game — a sleeping host kills the room.
+async function keepAwake() {
+  try {
+    if (!navigator.wakeLock) return;
+    keepAwake.lock = await navigator.wakeLock.request('screen');
+    document.addEventListener('visibilitychange', async () => {
+      if (document.visibilityState === 'visible' && keepAwake.lock?.released !== false) {
+        try { keepAwake.lock = await navigator.wakeLock.request('screen'); } catch (e) {}
+      }
+    });
+  } catch (e) { /* not supported or denied — fine */ }
+}
+
 function showView(id) {
   document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
   $(id).classList.add('active');
@@ -178,7 +205,7 @@ const host = {
 
   start() {
     const code = Array.from({length: 4}, () => LETTERS[Math.floor(Math.random() * LETTERS.length)]).join('');
-    this.peer = new Peer(PREFIX + code, { debug: 1 });
+    this.peer = new Peer(PREFIX + code, PEER_OPTS);
 
     this.peer.on('open', () => {
       $('roomCode').textContent = code;
@@ -186,12 +213,17 @@ const host = {
       $('qr').innerHTML = '';
       new QRCode($('qr'), { text: url, width: 168, height: 168, correctLevel: QRCode.CorrectLevel.M });
       showView('view-host');
+      keepAwake();
     });
 
     this.peer.on('error', err => {
       if (err.type === 'unavailable-id') this.start(); // code collision — roll a new one
       else $('hostStatus').textContent = 'Connection error: ' + err.type;
     });
+
+    // If the signaling link drops (screen briefly off, network blip), restore it
+    // so new players can still join. Existing data connections are unaffected.
+    this.peer.on('disconnected', () => { if (!this.peer.destroyed) this.peer.reconnect(); });
 
     this.peer.on('connection', conn => {
       conn.on('data', msg => this.onMessage(conn, msg));
@@ -287,16 +319,19 @@ const player = {
   buzzed: false,
 
   join(code, name) {
-    $('joinError').textContent = '';
+    this.progress('Contacting server…');
     $('joinBtn').disabled = true;
     this.name = name;
-    this.peer = new Peer({ debug: 1 });
+    this.peer = new Peer(PEER_OPTS);
+    const timeout = setTimeout(() =>
+      this.fail('Couldn’t reach the host. Double-check the code — and joining works best when everyone is on the same wifi.'), 15000);
 
     this.peer.on('open', () => {
+      this.progress('Connecting to host…');
       this.conn = this.peer.connect(PREFIX + code, { reliable: true });
-      const timeout = setTimeout(() => this.fail('Room not found. Check the code.'), 8000);
 
       this.conn.on('open', () => {
+        this.progress('Joining room…');
         this.conn.send({ type: 'join', name });
       });
       this.conn.on('data', msg => {
@@ -304,6 +339,7 @@ const player = {
           clearTimeout(timeout);
           $('playerInfo').textContent = name + ' · room ' + code;
           showView('view-player');
+          keepAwake();
         }
         this.onMessage(msg);
       });
@@ -311,15 +347,27 @@ const player = {
         $('playerStatus').textContent = 'Disconnected from host.';
         this.setButton('wait');
       });
+      this.conn.on('error', err => this.fail('Connection failed: ' + (err.type || err.message || err)));
     });
     this.peer.on('error', err => {
-      if (err.type === 'peer-unavailable') this.fail('Room not found. Check the code.');
+      clearTimeout(timeout);
+      if (err.type === 'peer-unavailable') this.fail('Room not found. Check the code — the room closes when the host leaves the page.');
+      else if (err.type === 'network' || err.type === 'server-error') this.fail('Can’t reach the signaling server. Check your internet connection and try again.');
       else this.fail('Connection error: ' + err.type);
     });
+    this.peer.on('disconnected', () => { if (this.peer && !this.peer.destroyed) this.peer.reconnect(); });
+  },
+
+  progress(text) {
+    const el = $('joinError');
+    el.style.color = 'var(--muted)';
+    el.textContent = text;
   },
 
   fail(text) {
-    $('joinError').textContent = text;
+    const el = $('joinError');
+    el.style.color = '';
+    el.textContent = text;
     $('joinBtn').disabled = false;
     if (this.peer) { this.peer.destroy(); this.peer = null; }
   },
