@@ -3,212 +3,431 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Buzz First</title>
+<title>Buzz.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Archivo+Black&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
   :root {
-    --bg: #0f1020;
-    --card: #1a1b33;
-    --accent: #ff4757;
-    --accent-dark: #c0392b;
-    --green: #2ed573;
-    --amber: #ffa502;
-    --text: #f1f2f6;
-    --muted: #9aa0b5;
+    --paper: #EFEBE2;
+    --ink: #111111;
+    --ink-soft: #3B372F;
+    --muted: #6B6459;
+    --red: #FF4D22;
+    --red-deep: #8E1F06;
+    --blue: #1B57F5;
+    --yellow: #FFD629;
+    --green: #00A24A;
+    --pink: #FF9ED2;
+    --violet: #8A5CF6;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-height: 100dvh;
+    font-family: Archivo, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background: var(--paper);
+    color: var(--ink);
   }
-  section { display: none; width: 100%; max-width: 560px; padding: 24px; flex: 1; flex-direction: column; }
+  .black { font-family: 'Archivo Black', Archivo, sans-serif; }
+  .mono { font-family: ui-monospace, Menlo, monospace; }
+
+  @keyframes drift  { 0%{transform:translate(0,0) rotate(0)} 50%{transform:translate(0,-14px) rotate(8deg)} 100%{transform:translate(0,0) rotate(0)} }
+  @keyframes drift2 { 0%{transform:translate(0,0) rotate(0)} 50%{transform:translate(10px,10px) rotate(-10deg)} 100%{transform:translate(0,0) rotate(0)} }
+  @keyframes pulseRing { 0%{transform:scale(1);opacity:.55} 70%{transform:scale(1.35);opacity:0} 100%{transform:scale(1.35);opacity:0} }
+  @keyframes bob   { 0%{transform:translateY(0)} 50%{transform:translateY(-6px)} 100%{transform:translateY(0)} }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+  @keyframes popIn { 0%{transform:scale(.6);opacity:0} 60%{transform:scale(1.08)} 100%{transform:scale(1);opacity:1} }
+  @keyframes confettiFall { 0%{transform:translate3d(0,-40px,0) rotate(0);opacity:1} 100%{transform:translate3d(var(--dx,0px),110vh,0) rotate(720deg);opacity:.9} }
+
+  section { display: none; min-height: 100dvh; width: 100%; position: relative; overflow: hidden; }
   section.active { display: flex; }
-  h1 { font-size: 2rem; text-align: center; margin: 24px 0 8px; letter-spacing: 1px; }
-  .tagline { text-align: center; color: var(--muted); margin-bottom: 40px; }
+
+  /* buttons */
   .btn {
-    display: block; width: 100%; padding: 18px; font-size: 1.15rem; font-weight: 700;
-    border: none; border-radius: 14px; cursor: pointer; color: #fff;
-    background: var(--card); transition: transform .08s, filter .15s;
+    border: none; cursor: pointer; font-family: Archivo, sans-serif;
+    font-weight: 800; font-size: 22px; letter-spacing: -.01em;
+    padding: 22px 46px; border-radius: 20px; color: #fff; background: var(--red);
+    box-shadow: 0 6px 0 var(--ink); transition: transform .08s, box-shadow .08s, background .15s, color .15s;
   }
-  .btn:active { transform: scale(.97); }
-  .btn:disabled { opacity: .45; cursor: default; }
-  .btn.primary { background: var(--accent); }
-  .btn.ghost { background: transparent; border: 2px solid var(--card); color: var(--muted); font-weight: 500; }
-  .btn + .btn { margin-top: 14px; }
-  input {
-    width: 100%; padding: 16px; font-size: 1.1rem; border-radius: 12px;
-    border: 2px solid #2c2e52; background: var(--card); color: var(--text);
-    margin-bottom: 14px; outline: none; text-align: center;
+  .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--ink); }
+  .btn.outline {
+    background: transparent; color: var(--ink); border: 2px solid var(--ink); box-shadow: none;
   }
-  input:focus { border-color: var(--accent); }
-  input.code { text-transform: uppercase; letter-spacing: .5em; font-weight: 700; font-size: 1.5rem; }
-  label { color: var(--muted); font-size: .85rem; display: block; margin-bottom: 6px; text-align: center; }
-  .error { color: var(--accent); text-align: center; min-height: 1.4em; margin-bottom: 10px; font-size: .95rem; }
+  .btn.outline:active { transform: translateY(2px); }
 
-  /* Host */
-  .room-banner { text-align: center; margin-bottom: 18px; }
-  .room-code { font-size: 3.2rem; font-weight: 800; letter-spacing: .35em; text-indent: .35em; color: var(--amber); }
-  .room-hint { color: var(--muted); font-size: .9rem; }
-  #qr { display: flex; justify-content: center; margin: 14px 0 20px; }
-  #qr img, #qr canvas { border-radius: 10px; border: 8px solid #fff; }
-  .players { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 20px; min-height: 40px; }
+  /* ── landing ── */
+  #view-home { flex-direction: column; align-items: center; justify-content: center; gap: 34px; padding: 60px 26px; text-align: center; }
+  .shape { position: absolute; pointer-events: none; }
+  .wordmark { font-size: 132px; line-height: .86; letter-spacing: -.055em; }
+  .tagline { margin-top: 16px; font-size: 24px; font-weight: 500; color: var(--ink-soft); }
+  .home-ctas { display: flex; gap: 16px; position: relative; }
+  .footnote { font-size: 14px; color: var(--muted); position: relative; }
+  .home-error { color: var(--red); font-weight: 600; font-size: 15px; min-height: 1.3em; position: relative; }
+  @media (max-width: 899px) {
+    .wordmark { font-size: 76px; letter-spacing: -.05em; }
+    .tagline { font-size: 19px; margin-top: 14px; }
+    .home-ctas { flex-direction: column-reverse; width: 100%; max-width: 400px; }
+    .home-ctas .btn { padding: 24px; box-shadow: 0 5px 0 var(--ink); width: 100%; }
+    .home-ctas .btn.outline { box-shadow: none; }
+    #hostBtn { background: transparent; color: var(--ink); border: 2px solid var(--ink); box-shadow: none; }
+    #joinShowBtn { background: var(--red); color: #fff; border: none; box-shadow: 0 5px 0 var(--ink); }
+  }
+  @media (min-width: 900px) {
+    #hostBtn { background: var(--red); color: #fff; border: none; }
+    #joinShowBtn { background: transparent; color: var(--ink); border: 2px solid var(--ink); box-shadow: none; }
+  }
+
+  /* ── host lobby ── */
+  #view-host-lobby { display: none; }
+  #view-host-lobby.active { display: grid; grid-template-columns: 1fr 1fr; }
+  .lobby-left { padding: 52px 46px; display: flex; flex-direction: column; justify-content: center; gap: 26px; }
+  .label { font-size: 15px; font-weight: 700; letter-spacing: .18em; color: var(--muted); }
+  .tiles { display: flex; gap: 12px; }
+  .tile {
+    width: 96px; height: 112px; border-radius: 20px; display: flex; align-items: center; justify-content: center;
+    font-family: 'Archivo Black', sans-serif; font-size: 64px; color: #fff;
+  }
+  .tile:nth-child(1) { background: var(--red); transform: rotate(-3deg); }
+  .tile:nth-child(2) { background: var(--blue); transform: rotate(2deg); }
+  .tile:nth-child(3) { background: var(--yellow); color: var(--ink); transform: rotate(-2deg); }
+  .tile:nth-child(4) { background: var(--green); transform: rotate(3deg); }
+  .qr-row { display: flex; align-items: center; gap: 18px; margin-top: 6px; }
+  .qr-card { width: 132px; height: 132px; background: #fff; border: 3px solid var(--ink); border-radius: 18px; padding: 10px; flex: none; }
+  .qr-card img, .qr-card canvas { width: 100% !important; height: 100% !important; border-radius: 6px; }
+  .qr-hint { font-size: 16px; font-weight: 600; color: var(--ink-soft); max-width: 190px; }
+  .qr-hint u { text-decoration: none; border-bottom: 3px solid var(--yellow); }
+  .net-note { font-size: 12px; color: var(--muted); }
+  .lobby-right { background: var(--ink); padding: 46px 40px; display: flex; flex-direction: column; gap: 20px; }
+  .room-head { display: flex; align-items: baseline; justify-content: space-between; }
+  .room-head .title { font-size: 30px; color: #fff; letter-spacing: -.02em; }
+  .room-head .count { font-size: 16px; font-weight: 700; color: var(--yellow); }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; align-content: flex-start; flex: 1; }
   .chip {
-    background: var(--card); padding: 8px 16px; border-radius: 999px; font-weight: 600; font-size: .95rem;
-    border: 1px solid #2c2e52;
+    display: flex; align-items: center; gap: 9px; background: rgba(255,255,255,.08);
+    border-radius: 999px; padding: 7px 16px 7px 7px; animation: popIn .35s ease-out both;
   }
-  .chip.buzzed { background: var(--green); color: #08331a; border-color: var(--green); }
-  #results { list-style: none; margin: 10px 0 20px; }
-  #results li {
-    display: flex; align-items: center; gap: 12px; background: var(--card);
-    padding: 14px 18px; border-radius: 12px; margin-bottom: 8px; font-size: 1.1rem;
-    animation: pop .25s ease;
+  .avatar {
+    width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 14px; color: var(--ink); flex: none;
   }
-  #results li:first-child { background: var(--green); color: #08331a; font-weight: 800; }
-  #results .place { font-size: 1.3rem; width: 2rem; }
-  #results .ms { margin-left: auto; font-variant-numeric: tabular-nums; opacity: .8; font-size: .95rem; }
-  @keyframes pop { from { transform: scale(.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-  .status { text-align: center; color: var(--muted); margin: 10px 0 16px; min-height: 1.4em; }
-  .status.armed { color: var(--green); font-weight: 700; font-size: 1.2rem; }
+  .chip span { color: #fff; font-weight: 600; font-size: 16px; }
+  .empty-room { color: rgba(255,255,255,.45); font-size: 17px; font-weight: 500; animation: blink 1.8s ease-in-out infinite; }
+  .start-btn {
+    border: none; font-family: Archivo, sans-serif; font-weight: 800; font-size: 22px;
+    padding: 22px; border-radius: 18px; cursor: pointer; width: 100%;
+    background: var(--red); color: #fff; transition: background .15s, color .15s;
+  }
+  .start-btn:disabled { background: rgba(255,255,255,.14); color: rgba(255,255,255,.4); cursor: default; }
+  @media (max-width: 899px) {
+    #view-host-lobby.active { grid-template-columns: 1fr; }
+    .lobby-left { padding: 46px 26px 34px; }
+    .tiles { gap: 10px; }
+    .tile { width: auto; flex: 1; max-width: 96px; aspect-ratio: 96/112; height: auto; font-size: clamp(36px, 11vw, 64px); }
+    .lobby-right { min-height: 46dvh; }
+  }
 
-  /* Player buzz button */
-  .buzz-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-  #buzzBtn {
-    width: min(75vw, 320px); height: min(75vw, 320px); border-radius: 50%;
-    border: none; font-size: 2.4rem; font-weight: 900; color: #fff; letter-spacing: 2px;
-    background: radial-gradient(circle at 30% 25%, #555a77, #2c2e52);
-    box-shadow: 0 12px 0 #14152b, 0 20px 40px rgba(0,0,0,.5);
-    cursor: pointer; transition: filter .15s;
-    user-select: none; -webkit-user-select: none; touch-action: manipulation;
+  /* ── host live round ── */
+  #view-host-live { background: var(--ink); padding: 38px 46px; flex-direction: column; gap: 22px; }
+  .live-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .live-title { display: flex; align-items: center; gap: 14px; }
+  .live-dot { width: 18px; height: 18px; border-radius: 50%; background: var(--red); animation: blink 1s ease-in-out infinite; flex: none; }
+  .live-title h2 { font-family: 'Archivo Black', sans-serif; font-size: 34px; color: #fff; letter-spacing: -.02em; font-weight: 400; }
+  .clock { display: flex; align-items: baseline; gap: 6px; font-family: 'Archivo Black', sans-serif; color: var(--yellow); }
+  .clock b { font-size: 52px; letter-spacing: -.03em; font-weight: 400; }
+  .clock i { font-size: 20px; font-style: normal; }
+  .lb { flex: 1; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; list-style: none; }
+  .lb-row {
+    display: flex; align-items: center; gap: 22px; background: rgba(255,255,255,.07);
+    border-radius: 18px; padding: 16px 24px; animation: popIn .3s ease-out both;
   }
-  #buzzBtn.armed {
-    background: radial-gradient(circle at 30% 25%, #ff6b81, var(--accent-dark));
-    box-shadow: 0 12px 0 #7d1f16, 0 20px 60px rgba(255,71,87,.45);
-    animation: pulse 1.2s infinite;
+  .lb-badge {
+    width: 62px; height: 62px; border-radius: 16px; display: flex; align-items: center; justify-content: center;
+    font-family: 'Archivo Black', sans-serif; font-size: 30px; color: var(--ink); flex: none;
   }
-  #buzzBtn:active { transform: translateY(8px); box-shadow: 0 4px 0 #14152b; }
-  @keyframes pulse { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.25); } }
-  .place-big { font-size: 4rem; font-weight: 900; text-align: center; }
-  .place-big small { display: block; font-size: 1.1rem; font-weight: 500; color: var(--muted); margin-top: 8px; }
-  .you-room { text-align: center; color: var(--muted); margin-bottom: 6px; font-size: .9rem; }
+  .lb-name { flex: 1; font-family: 'Archivo Black', sans-serif; font-size: 34px; color: #fff; letter-spacing: -.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lb-ms { font-family: ui-monospace, Menlo, monospace; font-size: 24px; font-weight: 600; color: rgba(255,255,255,.6); }
+  .lb-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: rgba(255,255,255,.5); }
+  .lb-empty .ring { width: 120px; height: 120px; border-radius: 50%; border: 4px dashed rgba(255,255,255,.25); animation: bob 2.4s ease-in-out infinite; }
+  .lb-empty .msg { font-size: 22px; font-weight: 600; }
+  .live-foot { display: flex; gap: 14px; }
+  .again-btn {
+    flex: 1; border: none; background: var(--yellow); color: var(--ink); font-family: Archivo, sans-serif;
+    font-weight: 800; font-size: 20px; padding: 20px; border-radius: 16px; cursor: pointer;
+  }
+  .end-btn {
+    border: 2px solid rgba(255,255,255,.35); background: transparent; color: #fff;
+    font-family: Archivo, sans-serif; font-weight: 700; font-size: 20px; padding: 20px 30px; border-radius: 16px; cursor: pointer;
+  }
+  @media (max-width: 899px) {
+    #view-host-live { padding: 30px 20px; }
+    .live-title h2 { font-size: 24px; }
+    .clock b { font-size: 40px; }
+    .lb-row { gap: 14px; padding: 12px 16px; }
+    .lb-badge { width: 48px; height: 48px; font-size: 24px; border-radius: 12px; }
+    .lb-name { font-size: 24px; }
+    .lb-ms { font-size: 18px; }
+  }
+
+  /* ── player join ── */
+  #view-join { padding: 96px 26px 40px; flex-direction: column; gap: 26px; max-width: 560px; margin: 0 auto; }
+  .join-h1 { font-size: 52px; line-height: .92; letter-spacing: -.04em; }
+  .join-sub { margin-top: 10px; font-size: 17px; font-weight: 500; color: var(--muted); }
+  .field { display: flex; flex-direction: column; gap: 10px; }
+  .field .label { font-size: 13px; letter-spacing: .16em; }
+  .code-boxes { display: flex; gap: 10px; position: relative; }
+  .code-box {
+    flex: 1; aspect-ratio: 1; background: #fff; border: 3px solid var(--ink); border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Archivo Black', sans-serif; font-size: 40px; color: var(--ink);
+  }
+  .code-box.hot { border-color: var(--red); }
+  #joinCode { position: absolute; inset: 0; opacity: 0; font-size: 16px; }
+  .name-input {
+    width: 100%; background: #fff; border: 3px solid var(--ink); border-radius: 16px;
+    padding: 18px 20px; font-family: Archivo, sans-serif; font-size: 24px; font-weight: 700; color: var(--ink); outline: none;
+  }
+  .name-input:focus { border-color: var(--red); }
+  .join-foot { margin-top: auto; display: flex; flex-direction: column; gap: 12px; }
+  .join-msg { text-align: center; font-size: 15px; font-weight: 600; color: var(--red); min-height: 1.3em; }
+  .join-msg.progress { color: var(--muted); }
+  .back-btn { border: none; background: transparent; color: var(--muted); font-family: Archivo, sans-serif; font-weight: 700; font-size: 17px; padding: 8px; cursor: pointer; }
+  .im-in { padding: 24px; box-shadow: 0 5px 0 var(--ink); }
+  .im-in:disabled { opacity: .5; }
+
+  /* ── player waiting ── */
+  #view-wait { padding: 100px 26px 46px; flex-direction: column; align-items: center; justify-content: center; gap: 28px; text-align: center; }
+  .wait-avatar {
+    width: 118px; height: 118px; background: var(--yellow); border-radius: 38% 62% 55% 45%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Archivo Black', sans-serif; font-size: 52px; color: var(--ink); animation: bob 2.6s ease-in-out infinite;
+  }
+  .wait-title { font-size: 44px; line-height: .95; letter-spacing: -.035em; }
+  .wait-status { margin-top: 14px; font-size: 19px; font-weight: 500; color: var(--muted); animation: blink 2s ease-in-out infinite; }
+  .wait-status.still { animation: none; }
+  .wait-foot {
+    position: absolute; bottom: 44px; left: 26px; right: 26px; font-size: 14px; font-weight: 600;
+    color: var(--muted); border-top: 2px solid rgba(0,0,0,.12); padding-top: 14px;
+  }
+
+  /* ── player armed ── */
+  #view-armed { background: var(--ink); align-items: center; justify-content: center; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+  .armed-label { position: absolute; top: 74px; left: 0; right: 0; text-align: center; font-size: 17px; font-weight: 700; letter-spacing: .16em; color: var(--yellow); }
+  .buzzer-wrap { position: relative; width: min(80vw, 300px); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; }
+  .buzzer-halo { position: absolute; inset: 0; border-radius: 50%; background: var(--red); animation: pulseRing 1.6s ease-out infinite; }
+  .buzzer {
+    position: relative; width: 97%; aspect-ratio: 1; border-radius: 50%; background: var(--red);
+    box-shadow: 0 12px 0 var(--red-deep), 0 22px 44px rgba(255,77,34,.45);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Archivo Black', sans-serif; font-size: 64px; letter-spacing: -.03em; color: #fff;
+  }
+  #view-armed:active .buzzer { transform: translateY(9px); box-shadow: 0 3px 0 var(--red-deep); }
+  .armed-hint { position: absolute; bottom: 60px; left: 26px; right: 26px; text-align: center; font-size: 16px; font-weight: 600; color: rgba(255,255,255,.45); }
+
+  /* ── player result ── */
+  #view-result { padding: 100px 26px 46px; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; background: var(--paper); color: var(--ink); }
+  #view-result.p1 { background: var(--green); color: #fff; }
+  #view-result.p2 { background: var(--yellow); }
+  #view-result.p3 { background: var(--pink); }
+  .res-kicker { position: relative; font-size: 17px; font-weight: 700; letter-spacing: .16em; opacity: .7; }
+  .res-place { position: relative; font-family: 'Archivo Black', sans-serif; font-size: 172px; line-height: .82; letter-spacing: -.06em; animation: popIn .4s ease-out both; }
+  .res-word { position: relative; font-family: 'Archivo Black', sans-serif; font-size: 40px; letter-spacing: -.03em; }
+  .res-pill { position: relative; margin-top: 18px; display: flex; align-items: center; gap: 12px; background: rgba(0,0,0,.12); border-radius: 999px; padding: 10px 20px; }
+  .res-pill .avatar { width: 34px; height: 34px; font-size: 16px; }
+  .res-pill .nm { font-weight: 800; font-size: 20px; }
+  .res-pill .ms { font-family: ui-monospace, Menlo, monospace; font-weight: 600; font-size: 18px; opacity: .75; }
+  .res-foot { position: absolute; bottom: 46px; left: 26px; right: 26px; font-size: 16px; font-weight: 600; opacity: .7; }
+  #confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 </style>
 </head>
 <body>
 
-<!-- HOME -->
+<!-- LANDING -->
 <section id="view-home" class="active">
-  <h1>🔴 Buzz First</h1>
-  <p class="tagline">The fastest finger wins. No arguments.</p>
-  <p class="error" id="homeError"></p>
-  <button class="btn primary" id="hostBtn">Host a game</button>
-  <button class="btn" id="joinShowBtn">Join with a code</button>
+  <div class="shape" style="top:-40px;left:-30px;width:190px;height:190px;background:var(--blue);border-radius:46% 54% 40% 60%;animation:drift 11s ease-in-out infinite;opacity:.95"></div>
+  <div class="shape" style="bottom:-60px;left:120px;width:150px;height:150px;background:var(--green);clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);animation:drift2 13s ease-in-out infinite"></div>
+  <div class="shape" style="top:60px;right:-50px;width:210px;height:210px;background:var(--pink);border-radius:50%;animation:drift2 15s ease-in-out infinite"></div>
+  <div class="shape" style="bottom:40px;right:80px;width:96px;height:96px;background:var(--yellow);transform:rotate(18deg);border-radius:22px;animation:drift 9s ease-in-out infinite"></div>
+  <div style="position:relative">
+    <h1 class="black wordmark">Buzz.</h1>
+    <p class="tagline">The fastest finger wins. No arguments.</p>
+  </div>
+  <div class="home-ctas">
+    <button class="btn" id="hostBtn">Host a game</button>
+    <button class="btn" id="joinShowBtn">Join with a code</button>
+  </div>
+  <p class="home-error" id="homeError"></p>
+  <p class="footnote">No app. No accounts. Twenty thumbs, one winner.</p>
 </section>
 
-<!-- JOIN FORM -->
+<!-- PLAYER JOIN -->
 <section id="view-join">
-  <h1>Join game</h1>
-  <p class="tagline">Ask the host for the room code</p>
-  <label>Room code</label>
-  <input id="joinCode" class="code" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="ABCD">
-  <label>Your name</label>
-  <input id="joinName" maxlength="16" autocomplete="off" placeholder="Steven">
-  <p class="error" id="joinError"></p>
-  <button class="btn primary" id="joinBtn">Join</button>
-  <button class="btn ghost" onclick="showView('view-home')">Back</button>
+  <div>
+    <h1 class="black join-h1">Join<br>the game</h1>
+    <p class="join-sub">Ask the host for the four letters.</p>
+  </div>
+  <div class="field">
+    <div class="label">ROOM CODE</div>
+    <div class="code-boxes" id="codeBoxes">
+      <div class="code-box"></div><div class="code-box"></div><div class="code-box"></div><div class="code-box"></div>
+      <input id="joinCode" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false">
+    </div>
+  </div>
+  <div class="field">
+    <div class="label">YOUR NAME</div>
+    <input id="joinName" class="name-input" maxlength="16" autocomplete="off" placeholder="Steven">
+  </div>
+  <div class="join-foot">
+    <p class="join-msg" id="joinMsg"></p>
+    <button class="btn im-in" id="joinBtn">I'm in</button>
+    <button class="back-btn" onclick="showView('view-home')">Back</button>
+  </div>
 </section>
 
-<!-- HOST -->
-<section id="view-host">
-  <div class="room-banner">
-    <div class="room-hint">Room code</div>
-    <div class="room-code" id="roomCode">····</div>
-    <div class="room-hint">Scan to join</div>
+<!-- HOST LOBBY -->
+<section id="view-host-lobby">
+  <div class="lobby-left">
+    <div class="label">ROOM CODE</div>
+    <div class="tiles" id="codeTiles">
+      <div class="tile"></div><div class="tile"></div><div class="tile"></div><div class="tile"></div>
+    </div>
+    <div class="qr-row">
+      <div class="qr-card"><div id="qr"></div></div>
+      <div class="qr-hint">Scan to join, or type the code at <u id="siteLabel">stevenros.com/buzz</u></div>
+    </div>
+    <div class="net-note" id="hostNet"></div>
   </div>
-  <div id="qr"></div>
-  <div class="players" id="playerChips"></div>
-  <p class="status" id="hostStatus">Waiting for players to join…</p>
-  <ol id="results"></ol>
-  <button class="btn primary" id="armBtn" disabled>Start round</button>
-  <button class="btn" id="resetBtn" style="display:none">Next round</button>
+  <div class="lobby-right">
+    <div class="room-head">
+      <div class="black title">In the room</div>
+      <div class="count" id="roomCount">0 / 20</div>
+    </div>
+    <div class="chips" id="playerChips">
+      <div class="empty-room">Waiting for thumbs…</div>
+    </div>
+    <button class="start-btn" id="armBtn" disabled>Start round</button>
+  </div>
 </section>
 
-<!-- PLAYER -->
-<section id="view-player">
-  <p class="you-room" id="playerInfo"></p>
-  <div class="buzz-wrap">
-    <div id="playerResult" class="place-big" style="display:none"></div>
-    <button id="buzzBtn" disabled>WAIT…</button>
+<!-- HOST LIVE ROUND -->
+<section id="view-host-live">
+  <div class="live-head">
+    <div class="live-title">
+      <div class="live-dot"></div>
+      <h2 id="roundTitle">Round 1 — buzzers live</h2>
+    </div>
+    <div class="clock"><b id="clock">0.0</b><i>s</i></div>
   </div>
-  <p class="status" id="playerStatus">Connected. Waiting for the host to start.</p>
+  <ol class="lb" id="lbList" style="display:none"></ol>
+  <div class="lb-empty" id="lbEmpty">
+    <div class="ring"></div>
+    <div class="msg">Nobody's hit it yet.</div>
+  </div>
+  <div class="live-foot">
+    <button class="again-btn" id="againBtn">Clear &amp; go again</button>
+    <button class="end-btn" id="endBtn">End game</button>
+  </div>
+</section>
+
+<!-- PLAYER WAITING -->
+<section id="view-wait">
+  <div class="wait-avatar" id="waitAvatar">S</div>
+  <div>
+    <div class="black wait-title" id="waitTitle">You're in.</div>
+    <div class="wait-status" id="waitStatus">Waiting for the host to start…</div>
+  </div>
+  <div class="wait-foot" id="waitFoot"></div>
+</section>
+
+<!-- PLAYER ARMED -->
+<section id="view-armed">
+  <div class="armed-label">BUZZERS OPEN</div>
+  <div class="buzzer-wrap">
+    <div class="buzzer-halo"></div>
+    <div class="buzzer">BUZZ</div>
+  </div>
+  <div class="armed-hint">Tap anywhere. Fastest thumb takes it.</div>
+</section>
+
+<!-- PLAYER RESULT -->
+<section id="view-result">
+  <div id="confetti"></div>
+  <div class="res-kicker" id="resKicker">YOU BUZZED</div>
+  <div class="res-place" id="resPlace">–</div>
+  <div class="res-word" id="resWord"></div>
+  <div class="res-pill">
+    <div class="avatar" id="resAvatar">S</div>
+    <span class="nm" id="resName"></span>
+    <span class="ms" id="resMs"></span>
+  </div>
+  <div class="res-foot" id="resFoot"></div>
 </section>
 
 <script>
 const $ = id => document.getElementById(id);
 const TOPIC_ROOT = 'buzzfirst';
 const LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // no I/O — avoids confusion
+const PALETTE = ['#FF4D22', '#1B57F5', '#FFD629', '#00A24A', '#FF9ED2', '#8A5CF6'];
+const SHAPES = ['50%', '44% 56% 60% 40%', '30%', '38% 62% 55% 45%', '18px'];
+const MAX_PLAYERS = 20;
 
-// All game traffic goes through a public MQTT broker over secure websockets.
+// All game traffic goes through public MQTT brokers over secure websockets.
 // Every device only makes an outbound connection — no device-to-device
 // networking — so it works on any wifi or cellular network that can load
-// this page. If the first broker is down, the next one is tried.
-const BROKERS = [
+// this page. The host serves the room on EVERY broker it can reach and a
+// joining player tries them all in parallel, so host and player connect as
+// long as they share any one working broker.
+const ALL_BROKERS = [
   'wss://broker.emqx.io:8084/mqtt',
   'wss://broker.hivemq.com:8884/mqtt',
   'wss://test.mosquitto.org:8081',
 ];
+// Debug hook: ?broker=1 restricts this device to a single broker by index.
+const forcedBroker = new URLSearchParams(location.search).get('broker');
+const BROKERS = forcedBroker !== null ? [ALL_BROKERS[+forcedBroker]] : ALL_BROKERS;
 
 function showView(id) {
   document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
   $(id).classList.add('active');
 }
 
-function randomId() {
-  return Math.random().toString(36).slice(2, 10);
+function randomId() { return Math.random().toString(36).slice(2, 10); }
+function ordinal(n) { const s = ['th','st','nd','rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
+function avatarStyle(el, idx) {
+  el.style.background = PALETTE[idx % PALETTE.length];
+  el.style.borderRadius = SHAPES[idx % SHAPES.length];
 }
 
-function connectBroker(will) {
+function connectOne(url, will) {
   return new Promise((resolve, reject) => {
-    let i = 0;
-    const tryNext = () => {
-      if (i >= BROKERS.length) return reject(new Error('all-brokers-failed'));
-      const client = mqtt.connect(BROKERS[i++], {
-        keepalive: 15,
-        connectTimeout: 5000,
-        reconnectPeriod: 1500,
-        clean: true,
-        will: will || undefined,
-      });
-      let settled = false, moved = false;
-      const giveUp = () => {
-        if (settled || moved) return;
-        moved = true;
-        client.end(true);
-        tryNext();
-      };
-      client.once('connect', () => { settled = true; resolve(client); });
-      client.once('error', giveUp);
-      setTimeout(giveUp, 6000);
-    };
-    tryNext();
+    const client = mqtt.connect(url, {
+      keepalive: 15, connectTimeout: 5000, reconnectPeriod: 1500, clean: true,
+      will: will || undefined,
+    });
+    let done = false;
+    client.once('connect', () => { if (done) return; done = true; resolve({ client, url }); });
+    const fail = () => { if (done) return; done = true; client.end(true); reject(new Error('unreachable ' + url)); };
+    client.once('error', fail);
+    setTimeout(fail, 7000);
   });
 }
 
-function beep(freq = 880, dur = 0.15) {
+function thump(freq, dur) {
   try {
-    const ctx = beep.ctx || (beep.ctx = new (window.AudioContext || window.webkitAudioContext)());
-    const osc = ctx.createOscillator(), gain = ctx.createGain();
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(0.25, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
-    osc.connect(gain).connect(ctx.destination);
-    osc.start(); osc.stop(ctx.currentTime + dur);
-  } catch (e) { /* audio blocked until user gesture — fine */ }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    thump.ac = thump.ac || new AC();
+    const t = thump.ac.currentTime, o = thump.ac.createOscillator(), g = thump.ac.createGain();
+    o.type = 'square';
+    o.frequency.setValueAtTime(freq, t);
+    o.frequency.exponentialRampToValueAtTime(freq * 0.5, t + dur);
+    g.gain.setValueAtTime(0.16, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(thump.ac.destination);
+    o.start(t); o.stop(t + dur + 0.02);
+  } catch (e) {}
 }
 
 // Keep phone screens awake during the game — a sleeping host kills the room.
@@ -221,17 +440,21 @@ async function keepAwake() {
         try { keepAwake.lock = await navigator.wakeLock.request('screen'); } catch (e) {}
       }
     });
-  } catch (e) { /* not supported or denied — fine */ }
+  } catch (e) {}
 }
 
 /* ---------------- HOST ---------------- */
 const host = {
-  client: null,
+  clients: [],         // one per reachable broker
   code: '',
   base: '',
-  players: new Map(),  // pid -> { name }
+  players: new Map(),  // pid -> { name, idx }
+  nextIdx: 0,
   buzzes: [],          // { pid, name, elapsed }
   phase: 'lobby',      // lobby | armed
+  round: 0,
+  clockTimer: null,
+  armedAtLocal: 0,
 
   async start() {
     $('hostBtn').disabled = true;
@@ -239,175 +462,252 @@ const host = {
     this.code = Array.from({length: 4}, () => LETTERS[Math.floor(Math.random() * LETTERS.length)]).join('');
     this.base = TOPIC_ROOT + '/' + this.code;
 
+    // Last-will lets players find out if the host device drops off abruptly.
+    const will = {
+      topic: this.base + '/h2c',
+      payload: JSON.stringify({ type: 'host-gone' }),
+      qos: 0, retain: false,
+    };
+    const attempts = BROKERS.map(url => connectOne(url, will));
+    attempts.forEach(p => p.then(({ client, url }) => this.addClient(client, url)).catch(() => {}));
     try {
-      // Last-will lets players find out if the host device drops off abruptly.
-      this.client = await connectBroker({
-        topic: this.base + '/h2c',
-        payload: JSON.stringify({ type: 'host-gone' }),
-        qos: 0,
-        retain: false,
-      });
+      await Promise.any(attempts); // room opens on the first broker; stragglers attach as they connect
     } catch (e) {
       $('hostBtn').disabled = false;
-      $('homeError').textContent = 'Can’t reach the game server. Check your internet connection and try again.';
+      $('homeError').textContent = 'Can’t reach any game server. Check your internet connection and try again.';
       return;
     }
 
-    this.client.subscribe(this.base + '/c2h/+', { qos: 1 });
-    this.client.on('message', (topic, payload) => {
+    document.querySelectorAll('#codeTiles .tile').forEach((el, i) => el.textContent = this.code[i]);
+    $('siteLabel').textContent = location.host + location.pathname.replace(/\/$/, '');
+    const url = location.origin + location.pathname + '?room=' + this.code;
+    $('qr').innerHTML = '';
+    new QRCode($('qr'), { text: url, width: 106, height: 106, correctLevel: QRCode.CorrectLevel.M });
+    showView('view-host-lobby');
+    keepAwake();
+  },
+
+  addClient(client, url) {
+    this.clients.push(client);
+    client.subscribe(this.base + '/c2h/+', { qos: 1 });
+    client.on('message', (topic, payload) => {
       const prefix = this.base + '/c2h/';
       if (!topic.startsWith(prefix)) return;
       let msg;
       try { msg = JSON.parse(payload.toString()); } catch (e) { return; }
       this.onMessage(topic.slice(prefix.length), msg);
     });
-
-    $('roomCode').textContent = this.code;
-    const url = location.origin + location.pathname + '?room=' + this.code;
-    $('qr').innerHTML = '';
-    new QRCode($('qr'), { text: url, width: 168, height: 168, correctLevel: QRCode.CorrectLevel.M });
-    showView('view-host');
-    keepAwake();
+    $('hostNet').textContent = 'room live on ' + this.clients.length + ' of ' + BROKERS.length + ' game servers';
   },
 
   onMessage(pid, msg) {
     if (msg.type === 'join') {
-      this.players.set(pid, { name: String(msg.name).slice(0, 16) });
-      this.send(pid, { type: 'joined', phase: this.phase });
+      if (!this.players.has(pid) && this.players.size >= MAX_PLAYERS) {
+        this.send(pid, { type: 'full' });
+        return;
+      }
+      const existing = this.players.get(pid);
+      const idx = existing ? existing.idx : this.nextIdx++;
+      this.players.set(pid, { name: String(msg.name).slice(0, 16), idx });
+      this.send(pid, { type: 'joined', idx, phase: this.phase, code: this.code, count: this.players.size });
       this.renderPlayers();
+      this.broadcast({ type: 'room', count: this.players.size });
     } else if (msg.type === 'leave') {
-      if (this.players.delete(pid)) this.renderPlayers();
+      if (this.players.delete(pid)) {
+        this.renderPlayers();
+        this.broadcast({ type: 'room', count: this.players.size });
+      }
     } else if (msg.type === 'buzz' && this.phase === 'armed') {
       const p = this.players.get(pid);
       if (!p || this.buzzes.some(b => b.pid === pid)) return; // one buzz per round
       this.buzzes.push({ pid, name: p.name, elapsed: msg.elapsed });
       this.buzzes.sort((a, b) => a.elapsed - b.elapsed);
-      beep(this.buzzes.length === 1 ? 1050 : 700);
-      this.renderResults();
+      thump(this.buzzes.length === 1 ? 880 : 520, 0.12);
+      this.renderBuzzes();
       this.broadcast({ type: 'standings', order: this.buzzes.map(b => ({ pid: b.pid, name: b.name, elapsed: b.elapsed })) });
     }
   },
 
   send(pid, msg) {
-    this.client.publish(this.base + '/h2c/' + pid, JSON.stringify(msg), { qos: 1 });
+    const s = JSON.stringify(msg);
+    this.clients.forEach(c => c.publish(this.base + '/h2c/' + pid, s, { qos: 1 }));
   },
 
   broadcast(msg) {
-    this.client.publish(this.base + '/h2c', JSON.stringify(msg), { qos: 1 });
+    const s = JSON.stringify(msg);
+    this.clients.forEach(c => c.publish(this.base + '/h2c', s, { qos: 1 }));
   },
 
   arm() {
     this.phase = 'armed';
     this.buzzes = [];
-    this.renderResults();
+    this.round++;
     this.broadcast({ type: 'armed' });
-    $('hostStatus').textContent = 'GO! Waiting for buzzes…';
-    $('hostStatus').classList.add('armed');
-    $('armBtn').style.display = 'none';
-    $('resetBtn').style.display = 'block';
+    $('roundTitle').textContent = 'Round ' + this.round + ' — buzzers live';
+    this.renderBuzzes();
+    showView('view-host-live');
+    this.armedAtLocal = performance.now();
+    $('clock').textContent = '0.0';
+    clearInterval(this.clockTimer);
+    this.clockTimer = setInterval(() => {
+      $('clock').textContent = ((performance.now() - this.armedAtLocal) / 1000).toFixed(1);
+    }, 100);
   },
 
-  reset() {
+  again() {
     this.phase = 'lobby';
     this.buzzes = [];
+    clearInterval(this.clockTimer);
     this.broadcast({ type: 'reset' });
-    this.renderResults();
-    $('hostStatus').textContent = 'Ready when you are.';
-    $('hostStatus').classList.remove('armed');
-    $('armBtn').style.display = 'block';
-    $('resetBtn').style.display = 'none';
+    this.renderPlayers();
+    showView('view-host-lobby');
+  },
+
+  end() {
+    this.broadcast({ type: 'host-gone' });
+    this.clients.forEach(c => c.end());
+    setTimeout(() => { location.href = location.pathname; }, 150);
   },
 
   renderPlayers() {
     const chips = $('playerChips');
     chips.innerHTML = '';
-    this.players.forEach(({ name }, pid) => {
-      const el = document.createElement('span');
-      el.className = 'chip' + (this.buzzes.some(b => b.pid === pid) ? ' buzzed' : '');
-      el.textContent = name;
-      chips.appendChild(el);
-    });
-    $('armBtn').disabled = this.players.size === 0;
-    if (this.phase === 'lobby') {
-      $('hostStatus').textContent = this.players.size === 0
-        ? 'Waiting for players to join…'
-        : this.players.size + ' player' + (this.players.size > 1 ? 's' : '') + ' in. Ready when you are.';
+    if (this.players.size === 0) {
+      chips.innerHTML = '<div class="empty-room">Waiting for thumbs…</div>';
+    } else {
+      this.players.forEach(({ name, idx }) => {
+        const chip = document.createElement('div');
+        chip.className = 'chip';
+        const av = document.createElement('div');
+        av.className = 'avatar';
+        avatarStyle(av, idx);
+        av.textContent = (name[0] || '?').toUpperCase();
+        const nm = document.createElement('span');
+        nm.textContent = name;
+        chip.append(av, nm);
+        chips.appendChild(chip);
+      });
     }
+    $('roomCount').textContent = this.players.size + ' / ' + MAX_PLAYERS;
+    $('armBtn').disabled = this.players.size === 0;
   },
 
-  renderResults() {
-    const medals = ['🥇', '🥈', '🥉'];
-    $('results').innerHTML = this.buzzes.map((b, i) => {
-      const delta = i === 0 ? (b.elapsed / 1000).toFixed(3) + 's' : '+' + Math.round(b.elapsed - this.buzzes[0].elapsed) + 'ms';
-      return `<li><span class="place">${medals[i] || (i + 1) + '.'}</span> ${b.name} <span class="ms">${delta}</span></li>`;
-    }).join('');
-    this.renderPlayers();
+  renderBuzzes() {
+    const list = $('lbList');
+    const empty = this.buzzes.length === 0;
+    $('lbEmpty').style.display = empty ? 'flex' : 'none';
+    list.style.display = empty ? 'none' : 'flex';
+    const badge = i => i === 0 ? 'var(--yellow)' : i === 1 ? 'var(--pink)' : i === 2 ? 'var(--green)' : 'rgba(255,255,255,.25)';
+    list.innerHTML = this.buzzes.map((b, i) => `
+      <li class="lb-row">
+        <div class="lb-badge" style="background:${badge(i)}">${i + 1}</div>
+        <div class="lb-name"></div>
+        <div class="lb-ms">${Math.round(b.elapsed)} ms</div>
+      </li>`).join('');
+    list.querySelectorAll('.lb-name').forEach((el, i) => el.textContent = this.buzzes[i].name);
   },
 };
 
 /* ---------------- PLAYER ---------------- */
 const player = {
-  client: null,
+  client: null,   // the adopted broker connection once the host answers
+  pending: [],    // candidate connections while searching for the room
+  timeout: null,
   pid: '',
   base: '',
   name: '',
+  code: '',
+  idx: 0,
+  count: 0,
+  via: '',
   joined: false,
   armedAt: null,
   buzzed: false,
+  myElapsed: 0,
 
-  async join(code, name) {
-    this.progress('Connecting to game server…');
+  join(code, name) {
+    this.progress('Connecting to game servers…');
     $('joinBtn').disabled = true;
     this.pid = randomId();
     this.name = name;
+    this.code = code;
     this.base = TOPIC_ROOT + '/' + code;
+    this.joined = false;
+    this.pending = [];
 
-    try {
-      // Last-will removes this player from the host's list if the phone drops off.
-      this.client = await connectBroker({
-        topic: this.base + '/c2h/' + this.pid,
-        payload: JSON.stringify({ type: 'leave' }),
-        qos: 0,
-        retain: false,
-      });
-    } catch (e) {
-      return this.fail('Can’t reach the game server. Check your internet connection and try again.');
-    }
+    // Last-will removes this player from the host's list if the phone drops off.
+    const will = {
+      topic: this.base + '/c2h/' + this.pid,
+      payload: JSON.stringify({ type: 'leave' }),
+      qos: 0, retain: false,
+    };
 
-    this.progress('Looking for the room…');
-    this.client.subscribe([this.base + '/h2c', this.base + '/h2c/' + this.pid], { qos: 1 });
-    const timeout = setTimeout(() => {
-      if (!this.joined) this.fail('Room not found. Check the code — the room closes when the host leaves the page.');
-    }, 10000);
+    // Try every broker in parallel and ask for the room on each — the host may
+    // only be reachable on some of them. First one where the host answers wins.
+    let anyConnected = false;
+    const attempts = BROKERS.map(url => connectOne(url, will));
+    attempts.forEach(p => p.then(({ client, url }) => {
+      if (this.joined) { client.end(); return; }
+      anyConnected = true;
+      this.pending.push({ client, url });
+      this.progress('Looking for the room…');
+      client.subscribe([this.base + '/h2c', this.base + '/h2c/' + this.pid], { qos: 1 });
+      client.on('message', (topic, payload) => this.onRaw(client, url, payload));
+      client.publish(this.base + '/c2h/' + this.pid, JSON.stringify({ type: 'join', name }), { qos: 1 });
+    }).catch(() => {}));
 
-    this.client.on('message', (topic, payload) => {
-      let msg;
-      try { msg = JSON.parse(payload.toString()); } catch (e) { return; }
-      if (msg.type === 'joined' && !this.joined) {
-        this.joined = true;
-        clearTimeout(timeout);
-        $('playerInfo').textContent = name + ' · room ' + code;
-        showView('view-player');
-        keepAwake();
+    Promise.allSettled(attempts).then(() => {
+      if (!anyConnected && !this.joined) {
+        this.fail('Can’t reach any game server. Check your internet connection and try again.');
       }
-      this.onMessage(msg);
     });
+    this.timeout = setTimeout(() => {
+      if (!this.joined && anyConnected) {
+        this.fail('Room not found. Check the code — the room closes when the host leaves the page.');
+      }
+    }, 12000);
+  },
 
-    this.send({ type: 'join', name });
+  onRaw(client, url, payload) {
+    let msg;
+    try { msg = JSON.parse(payload.toString()); } catch (e) { return; }
+    if (!this.joined) {
+      if (msg.type === 'full') { this.fail('That room is full — twenty thumbs max.'); return; }
+      if (msg.type !== 'joined') return;
+      this.joined = true;
+      clearTimeout(this.timeout);
+      this.client = client;
+      this.via = new URL(url).hostname.split('.').slice(-2, -1)[0] || '';
+      // Drop the other candidates gracefully (clean disconnect, so their
+      // last-will "leave" does NOT fire and kick us out of the lobby).
+      this.pending.forEach(p => { if (p.client !== client) p.client.end(); });
+      this.pending = [];
+      this.idx = msg.idx || 0;
+      this.count = msg.count || 1;
+      thump(420, 0.08);
+      this.showWait();
+      keepAwake();
+      return;
+    }
+    if (client !== this.client) return;
+    this.onMessage(msg);
   },
 
   progress(text) {
-    const el = $('joinError');
-    el.style.color = 'var(--muted)';
+    const el = $('joinMsg');
+    el.classList.add('progress');
     el.textContent = text;
   },
 
   fail(text) {
-    const el = $('joinError');
-    el.style.color = '';
+    const el = $('joinMsg');
+    el.classList.remove('progress');
     el.textContent = text;
     $('joinBtn').disabled = false;
     this.joined = false;
+    clearTimeout(this.timeout);
+    this.pending.forEach(p => p.client.end(true));
+    this.pending = [];
     if (this.client) { this.client.end(true); this.client = null; }
   },
 
@@ -415,32 +715,42 @@ const player = {
     this.client.publish(this.base + '/c2h/' + this.pid, JSON.stringify(msg), { qos: 1 });
   },
 
+  showWait(statusText, still) {
+    const av = $('waitAvatar');
+    avatarStyle(av, this.idx);
+    av.textContent = (this.name[0] || '?').toUpperCase();
+    $('waitTitle').innerHTML = 'You\'re in,<br>' + this.name.replace(/</g, '&lt;') + '.';
+    const st = $('waitStatus');
+    st.textContent = statusText || 'Waiting for the host to start…';
+    st.classList.toggle('still', !!still);
+    this.renderWaitFoot();
+    showView('view-wait');
+  },
+
+  renderWaitFoot() {
+    $('waitFoot').textContent = 'Room ' + this.code + ' · ' + this.count + ' player' + (this.count === 1 ? '' : 's') +
+      (this.via ? ' · via ' + this.via : '');
+  },
+
   onMessage(msg) {
     if (msg.type === 'armed') {
       this.armedAt = performance.now();
       this.buzzed = false;
-      $('playerResult').style.display = 'none';
-      this.setButton('armed');
-      $('playerStatus').textContent = '';
-      beep(660, 0.1);
+      showView('view-armed');
     } else if (msg.type === 'reset') {
       this.armedAt = null;
       this.buzzed = false;
-      $('playerResult').style.display = 'none';
-      this.setButton('wait');
-      $('playerStatus').textContent = 'Waiting for the host to start.';
+      this.showWait();
+    } else if (msg.type === 'room') {
+      this.count = msg.count;
+      this.renderWaitFoot();
     } else if (msg.type === 'standings' && this.buzzed) {
       const idx = msg.order.findIndex(o => o.pid === this.pid);
-      if (idx >= 0) {
-        const medals = ['🥇 First!', '🥈 2nd', '🥉 3rd'];
-        $('playerResult').innerHTML = (medals[idx] || '#' + (idx + 1)) +
-          `<small>${Math.round(msg.order[idx].elapsed)}ms reaction</small>`;
-        $('playerResult').style.display = 'block';
-      }
+      if (idx >= 0) this.renderResult(idx + 1, msg.order[idx].elapsed);
     } else if (msg.type === 'host-gone') {
       this.armedAt = null;
-      this.setButton('wait');
-      $('playerStatus').textContent = 'The host left the room.';
+      this.buzzed = false;
+      this.showWait('The host left the room.', true);
     }
   },
 
@@ -448,47 +758,101 @@ const player = {
     if (this.armedAt === null || this.buzzed) return;
     const elapsed = performance.now() - this.armedAt;
     this.buzzed = true;
+    this.myElapsed = elapsed;
     this.send({ type: 'buzz', elapsed });
-    this.setButton('buzzed');
-    beep(1050, 0.2);
+    thump(880, 0.14);
+    setTimeout(() => thump(300, 0.2), 90);
+    this.renderResult(null, elapsed); // pending place until standings arrive
   },
 
-  setButton(state) {
-    const btn = $('buzzBtn');
-    btn.classList.toggle('armed', state === 'armed');
-    btn.disabled = state !== 'armed';
-    btn.textContent = state === 'armed' ? 'BUZZ!' : state === 'buzzed' ? 'BUZZED' : 'WAIT…';
+  renderResult(place, ms) {
+    const view = $('view-result');
+    view.classList.remove('p1', 'p2', 'p3');
+    if (place === 1) view.classList.add('p1');
+    else if (place === 2) view.classList.add('p2');
+    else if (place === 3) view.classList.add('p3');
+
+    $('resKicker').textContent = place === 1 ? 'YOU GOT IT' : 'YOU BUZZED';
+    const big = $('resPlace');
+    big.textContent = place === null ? '·' : String(place);
+    big.style.animation = 'none';
+    void big.offsetWidth; // restart popIn
+    big.style.animation = '';
+    $('resWord').textContent = place === null ? '' : (place === 1 ? 'FIRST!' : ordinal(place));
+    const av = $('resAvatar');
+    avatarStyle(av, this.idx);
+    av.textContent = (this.name[0] || '?').toUpperCase();
+    $('resName').textContent = this.name;
+    $('resMs').textContent = Math.round(ms) + ' ms';
+    $('resFoot').textContent = place === null ? '' :
+      place === 1 ? 'The floor is yours. Answer up.' :
+      'Beaten by ' + (place - 1) + ' thumb' + (place === 2 ? '' : 's') + '.';
+
+    const conf = $('confetti');
+    conf.innerHTML = '';
+    if (place === 1) {
+      for (let i = 0; i < 26; i++) {
+        const d = document.createElement('div');
+        d.style.cssText = `position:absolute;top:-30px;left:${(3 + i * 3.7) % 96}%;` +
+          `width:${10 + (i % 3) * 5}px;height:${14 + (i % 4) * 4}px;` +
+          `background:${PALETTE[i % PALETTE.length]};border-radius:${i % 3 === 0 ? '50%' : '3px'};` +
+          `--dx:${((i % 5) - 2) * 34}px;` +
+          `animation:confettiFall ${1.6 + (i % 5) * 0.35}s linear ${(i % 7) * 0.12}s infinite`;
+        conf.appendChild(d);
+      }
+    }
+    showView('view-result');
   },
 };
 
+/* ---------------- Code input (4 letter boxes) ---------------- */
+const codeInput = $('joinCode');
+function renderCodeBoxes() {
+  const v = codeInput.value;
+  document.querySelectorAll('#codeBoxes .code-box').forEach((box, i) => {
+    box.textContent = v[i] || '';
+    box.classList.toggle('hot', i === Math.min(v.length, 3) && document.activeElement === codeInput);
+  });
+}
+codeInput.addEventListener('input', () => {
+  codeInput.value = codeInput.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+  renderCodeBoxes();
+  if (codeInput.value.length === 4) $('joinName').focus();
+});
+codeInput.addEventListener('focus', renderCodeBoxes);
+codeInput.addEventListener('blur', renderCodeBoxes);
+$('codeBoxes').addEventListener('click', () => codeInput.focus());
+
 /* ---------------- Wiring ---------------- */
-$('hostBtn').onclick = () => { beep(1, 0.01); host.start(); };
-$('joinShowBtn').onclick = () => showView('view-join');
+$('hostBtn').onclick = () => { thump(1, 0.01); host.start(); };
+$('joinShowBtn').onclick = () => { showView('view-join'); renderCodeBoxes(); };
 $('joinBtn').onclick = () => {
-  const code = $('joinCode').value.trim().toUpperCase();
+  const code = codeInput.value.trim().toUpperCase();
   const name = $('joinName').value.trim();
-  if (code.length !== 4) return $('joinError').textContent = 'Code is 4 letters.';
-  if (!name) return $('joinError').textContent = 'Enter your name.';
-  beep(1, 0.01);
+  if (code.length !== 4) return $('joinMsg').textContent = 'The code is four letters.', $('joinMsg').classList.remove('progress');
+  if (!name) return $('joinMsg').textContent = 'Tell us your name.', $('joinMsg').classList.remove('progress');
+  thump(1, 0.01);
   player.join(code, name);
 };
 $('armBtn').onclick = () => host.arm();
-$('resetBtn').onclick = () => host.reset();
-$('buzzBtn').addEventListener('pointerdown', () => player.buzz());
+$('againBtn').onclick = () => host.again();
+$('endBtn').onclick = () => host.end();
+$('view-armed').addEventListener('pointerdown', () => player.buzz());
 
 // Tell the room when this device leaves the page gracefully.
 window.addEventListener('pagehide', () => {
   try {
     if (player.client && player.joined) { player.send({ type: 'leave' }); player.client.end(); }
-    if (host.client) { host.broadcast({ type: 'host-gone' }); host.client.end(); }
+    if (host.clients.length) { host.broadcast({ type: 'host-gone' }); host.clients.forEach(c => c.end()); }
   } catch (e) {}
 });
 
-// Deep link: ?room=ABCD pre-fills the join form
-const roomParam = new URLSearchParams(location.search).get('room');
+// Deep link: ?room=ABCD (or ?c=ABCD) pre-fills the join form
+const roomParam = new URLSearchParams(location.search).get('room') || new URLSearchParams(location.search).get('c');
 if (roomParam) {
-  $('joinCode').value = roomParam.toUpperCase();
+  codeInput.value = roomParam.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
   showView('view-join');
+  renderCodeBoxes();
   $('joinName').focus();
 }
 </script>
