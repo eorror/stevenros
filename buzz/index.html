@@ -212,6 +212,18 @@
     color: var(--muted); border-top: 2px solid rgba(0,0,0,.12); padding-top: 14px;
   }
 
+  /* ── countdown (host overlay + player view) ── */
+  .count-kicker { font-size: 17px; font-weight: 700; letter-spacing: .16em; color: var(--yellow); }
+  .count-num {
+    font-family: 'Archivo Black', sans-serif; font-size: 172px; line-height: .82;
+    letter-spacing: -.06em; color: var(--yellow); animation: popIn .4s ease-out both;
+  }
+  .count-overlay {
+    position: absolute; inset: 0; background: var(--ink); z-index: 5;
+    display: none; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+  }
+  #view-count { background: var(--ink); flex-direction: column; align-items: center; justify-content: center; gap: 18px; }
+
   /* ── player armed ── */
   #view-armed { background: var(--ink); align-items: center; justify-content: center; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
   .armed-label { position: absolute; top: 74px; left: 0; right: 0; text-align: center; font-size: 17px; font-weight: 700; letter-spacing: .16em; color: var(--yellow); }
@@ -313,6 +325,10 @@
 
 <!-- HOST LIVE ROUND -->
 <section id="view-host-live">
+  <div class="count-overlay" id="countOverlay">
+    <div class="count-kicker">GET READY</div>
+    <div class="count-num" id="countNum">3</div>
+  </div>
   <div class="live-head">
     <div class="live-title">
       <div class="live-dot"></div>
@@ -339,6 +355,12 @@
     <div class="wait-status" id="waitStatus">Waiting for the host to start…</div>
   </div>
   <div class="wait-foot" id="waitFoot"></div>
+</section>
+
+<!-- PLAYER COUNTDOWN -->
+<section id="view-count">
+  <div class="count-kicker">GET READY</div>
+  <div class="count-num" id="pCountNum">3</div>
 </section>
 
 <!-- PLAYER ARMED -->
@@ -539,15 +561,43 @@ const host = {
   },
 
   arm() {
-    this.phase = 'armed';
+    this.phase = 'countdown';
     this.buzzes = [];
     this.round++;
-    this.broadcast({ type: 'armed' });
-    $('roundTitle').textContent = 'Round ' + this.round + ' — buzzers live';
+    this.broadcast({ type: 'countdown' });
+    $('roundTitle').textContent = 'Round ' + this.round + ' — get ready…';
+    $('clock').textContent = '0.0';
+    clearInterval(this.clockTimer);
     this.renderBuzzes();
     showView('view-host-live');
+
+    const overlay = $('countOverlay'), num = $('countNum');
+    overlay.style.display = 'flex';
+    const step = k => {
+      num.textContent = k;
+      num.style.animation = 'none';
+      void num.offsetWidth; // restart popIn
+      num.style.animation = '';
+      thump(520, 0.06);
+    };
+    let k = 3;
+    step(k);
+    clearInterval(this.countTimer);
+    this.countTimer = setInterval(() => {
+      k--;
+      if (k >= 1) { step(k); return; }
+      clearInterval(this.countTimer);
+      overlay.style.display = 'none';
+      this.goLive();
+    }, 1000);
+  },
+
+  goLive() {
+    this.phase = 'armed';
+    this.broadcast({ type: 'armed' });
+    $('roundTitle').textContent = 'Round ' + this.round + ' — buzzers live';
+    thump(880, 0.1);
     this.armedAtLocal = performance.now();
-    $('clock').textContent = '0.0';
     clearInterval(this.clockTimer);
     this.clockTimer = setInterval(() => {
       $('clock').textContent = ((performance.now() - this.armedAtLocal) / 1000).toFixed(1);
@@ -558,6 +608,8 @@ const host = {
     this.phase = 'lobby';
     this.buzzes = [];
     clearInterval(this.clockTimer);
+    clearInterval(this.countTimer);
+    $('countOverlay').style.display = 'none';
     this.broadcast({ type: 'reset' });
     this.renderPlayers();
     showView('view-host-lobby');
@@ -732,12 +784,39 @@ const player = {
       (this.via ? ' · via ' + this.via : '');
   },
 
+  runCountdown() {
+    this.armedAt = null;
+    this.buzzed = false;
+    const num = $('pCountNum');
+    const step = k => {
+      num.textContent = k;
+      num.style.animation = 'none';
+      void num.offsetWidth; // restart popIn
+      num.style.animation = '';
+      thump(520, 0.06);
+    };
+    let k = 3;
+    step(k);
+    showView('view-count');
+    clearInterval(this.countTimer);
+    this.countTimer = setInterval(() => {
+      k--;
+      if (k >= 1) step(k);
+      else clearInterval(this.countTimer); // hold on 1 until the host's GO arrives
+    }, 1000);
+  },
+
   onMessage(msg) {
-    if (msg.type === 'armed') {
+    if (msg.type === 'countdown') {
+      this.runCountdown();
+    } else if (msg.type === 'armed') {
+      clearInterval(this.countTimer);
       this.armedAt = performance.now();
       this.buzzed = false;
+      thump(980, 0.12);
       showView('view-armed');
     } else if (msg.type === 'reset') {
+      clearInterval(this.countTimer);
       this.armedAt = null;
       this.buzzed = false;
       this.showWait();
@@ -748,6 +827,7 @@ const player = {
       const idx = msg.order.findIndex(o => o.pid === this.pid);
       if (idx >= 0) this.renderResult(idx + 1, msg.order[idx].elapsed);
     } else if (msg.type === 'host-gone') {
+      clearInterval(this.countTimer);
       this.armedAt = null;
       this.buzzed = false;
       this.showWait('The host left the room.', true);
