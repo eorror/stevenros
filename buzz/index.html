@@ -560,8 +560,10 @@ const host = {
       this.broadcastRoom();
     } else if (msg.type === 'leave') {
       if (this.players.delete(pid)) {
+        if (this.armedPids) this.armedPids.delete(pid);
         this.renderPlayers();
         this.broadcastRoom();
+        this.checkAllIn(); // a leaver shouldn't keep the clock running
       }
     } else if (msg.type === 'buzz' && this.phase === 'armed') {
       const p = this.players.get(pid);
@@ -571,6 +573,7 @@ const host = {
       thump(this.buzzes.length === 1 ? 880 : 520, 0.12);
       this.renderBuzzes();
       this.broadcast({ type: 'standings', order: this.buzzes.map(b => ({ pid: b.pid, name: b.name, elapsed: b.elapsed })) });
+      this.checkAllIn();
     }
   },
 
@@ -588,6 +591,15 @@ const host = {
     const scores = {};
     this.players.forEach((p, pid) => scores[pid] = p.score);
     this.broadcast({ type: 'room', count: this.players.size, scores });
+  },
+
+  checkAllIn() {
+    if (this.phase !== 'armed' || !this.armedPids || this.armedPids.size === 0) return;
+    const allIn = [...this.armedPids].every(pid => this.buzzes.some(b => b.pid === pid));
+    if (allIn) {
+      clearInterval(this.clockTimer);
+      $('roundTitle').textContent = 'Round ' + this.round + ' — everyone\'s in';
+    }
   },
 
   award(pid) {
@@ -642,6 +654,7 @@ const host = {
 
   goLive() {
     this.phase = 'armed';
+    this.armedPids = new Set(this.players.keys()); // who can buzz this round
     this.broadcast({ type: 'armed' });
     $('roundTitle').textContent = 'Round ' + this.round + ' — buzzers live';
     thump(880, 0.1);
