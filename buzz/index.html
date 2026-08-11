@@ -114,7 +114,18 @@
     font-weight: 900; font-size: 14px; color: var(--ink); flex: none;
   }
   .chip span { color: #fff; font-weight: 600; font-size: 16px; }
+  .chip .pts {
+    background: var(--yellow); color: var(--ink); border-radius: 999px;
+    min-width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 900; padding: 0 7px;
+  }
   .empty-room { color: rgba(255,255,255,.45); font-size: 17px; font-weight: 500; animation: blink 1.8s ease-in-out infinite; }
+  .clear-pts {
+    border: 2px solid rgba(255,255,255,.35); background: transparent; color: rgba(255,255,255,.75);
+    font-family: Archivo, sans-serif; font-weight: 700; font-size: 15px;
+    padding: 10px 18px; border-radius: 999px; cursor: pointer; align-self: flex-start;
+  }
+  .clear-pts:active { border-color: #fff; color: #fff; }
   .start-btn {
     border: none; font-family: Archivo, sans-serif; font-weight: 800; font-size: 22px;
     padding: 22px; border-radius: 18px; cursor: pointer; width: 100%;
@@ -141,8 +152,18 @@
   .lb { flex: 1; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; list-style: none; }
   .lb-row {
     display: flex; align-items: center; gap: 22px; background: rgba(255,255,255,.07);
-    border-radius: 18px; padding: 16px 24px; animation: popIn .3s ease-out both;
+    border-radius: 18px; padding: 16px 24px; cursor: pointer;
+    user-select: none; -webkit-user-select: none;
   }
+  .lb-row.anim { animation: popIn .3s ease-out both; }
+  .lb-row:active { background: rgba(255,255,255,.14); }
+  .lb-pts {
+    background: var(--yellow); color: var(--ink); border-radius: 999px;
+    padding: 6px 16px; font-size: 17px; font-weight: 800; flex: none;
+  }
+  .lb-pts.bump { animation: ptsPop .25s ease-out; }
+  @keyframes ptsPop { 0%{transform:scale(1)} 50%{transform:scale(1.3)} 100%{transform:scale(1)} }
+  .live-hint { font-size: 14px; font-weight: 600; color: rgba(255,255,255,.45); margin-top: -12px; }
   .lb-badge {
     width: 62px; height: 62px; border-radius: 16px; display: flex; align-items: center; justify-content: center;
     font-family: 'Archivo Black', sans-serif; font-size: 30px; color: var(--ink); flex: none;
@@ -319,6 +340,7 @@
     <div class="chips" id="playerChips">
       <div class="empty-room">Waiting for thumbs…</div>
     </div>
+    <button class="clear-pts" id="clearPtsBtn" style="display:none">Clear points</button>
     <button class="start-btn" id="armBtn" disabled>Start round</button>
   </div>
 </section>
@@ -336,6 +358,7 @@
     </div>
     <div class="clock"><b id="clock">0.0</b><i>s</i></div>
   </div>
+  <div class="live-hint">Tap a player to give them a point.</div>
   <ol class="lb" id="lbList" style="display:none"></ol>
   <div class="lb-empty" id="lbEmpty">
     <div class="ring"></div>
@@ -530,14 +553,15 @@ const host = {
       }
       const existing = this.players.get(pid);
       const idx = existing ? existing.idx : this.nextIdx++;
-      this.players.set(pid, { name: String(msg.name).slice(0, 16), idx });
-      this.send(pid, { type: 'joined', idx, phase: this.phase, code: this.code, count: this.players.size });
+      const score = existing ? existing.score : 0;
+      this.players.set(pid, { name: String(msg.name).slice(0, 16), idx, score });
+      this.send(pid, { type: 'joined', idx, phase: this.phase, code: this.code, count: this.players.size, score });
       this.renderPlayers();
-      this.broadcast({ type: 'room', count: this.players.size });
+      this.broadcastRoom();
     } else if (msg.type === 'leave') {
       if (this.players.delete(pid)) {
         this.renderPlayers();
-        this.broadcast({ type: 'room', count: this.players.size });
+        this.broadcastRoom();
       }
     } else if (msg.type === 'buzz' && this.phase === 'armed') {
       const p = this.players.get(pid);
@@ -558,6 +582,30 @@ const host = {
   broadcast(msg) {
     const s = JSON.stringify(msg);
     this.clients.forEach(c => c.publish(this.base + '/h2c', s, { qos: 1 }));
+  },
+
+  broadcastRoom() {
+    const scores = {};
+    this.players.forEach((p, pid) => scores[pid] = p.score);
+    this.broadcast({ type: 'room', count: this.players.size, scores });
+  },
+
+  award(pid) {
+    const p = this.players.get(pid);
+    if (!p) return;
+    p.score++;
+    thump(700, 0.08);
+    this.renderBuzzes(false);
+    const pill = document.querySelector(`.lb-row[data-pid="${pid}"] .lb-pts`);
+    if (pill) { pill.classList.remove('bump'); void pill.offsetWidth; pill.classList.add('bump'); }
+    this.broadcastRoom();
+  },
+
+  clearPoints() {
+    this.players.forEach(p => p.score = 0);
+    this.renderPlayers();
+    this.renderBuzzes(false);
+    this.broadcastRoom();
   },
 
   arm() {
@@ -627,7 +675,7 @@ const host = {
     if (this.players.size === 0) {
       chips.innerHTML = '<div class="empty-room">Waiting for thumbs…</div>';
     } else {
-      this.players.forEach(({ name, idx }) => {
+      this.players.forEach(({ name, idx, score }) => {
         const chip = document.createElement('div');
         chip.className = 'chip';
         const av = document.createElement('div');
@@ -637,25 +685,39 @@ const host = {
         const nm = document.createElement('span');
         nm.textContent = name;
         chip.append(av, nm);
+        if (score > 0) {
+          const pts = document.createElement('div');
+          pts.className = 'pts';
+          pts.textContent = score;
+          chip.appendChild(pts);
+        }
         chips.appendChild(chip);
       });
     }
     $('roomCount').textContent = this.players.size + ' / ' + MAX_PLAYERS;
     $('armBtn').disabled = this.players.size === 0;
+    let anyPoints = false;
+    this.players.forEach(p => { if (p.score > 0) anyPoints = true; });
+    $('clearPtsBtn').style.display = anyPoints ? 'block' : 'none';
   },
 
-  renderBuzzes() {
+  renderBuzzes(animate = true) {
     const list = $('lbList');
     const empty = this.buzzes.length === 0;
     $('lbEmpty').style.display = empty ? 'flex' : 'none';
     list.style.display = empty ? 'none' : 'flex';
     const badge = i => i === 0 ? 'var(--yellow)' : i === 1 ? 'var(--pink)' : i === 2 ? 'var(--green)' : 'rgba(255,255,255,.25)';
-    list.innerHTML = this.buzzes.map((b, i) => `
-      <li class="lb-row">
+    list.innerHTML = this.buzzes.map((b, i) => {
+      const p = this.players.get(b.pid);
+      const pts = p && p.score > 0 ? `<div class="lb-pts">${p.score} pt${p.score === 1 ? '' : 's'}</div>` : '';
+      return `
+      <li class="lb-row${animate ? ' anim' : ''}" data-pid="${b.pid}">
         <div class="lb-badge" style="background:${badge(i)}">${i + 1}</div>
         <div class="lb-name"></div>
+        ${pts}
         <div class="lb-ms">${Math.round(b.elapsed)} ms</div>
-      </li>`).join('');
+      </li>`;
+    }).join('');
     list.querySelectorAll('.lb-name').forEach((el, i) => el.textContent = this.buzzes[i].name);
   },
 };
@@ -671,6 +733,7 @@ const player = {
   code: '',
   idx: 0,
   count: 0,
+  score: 0,
   via: '',
   joined: false,
   armedAt: null,
@@ -736,6 +799,7 @@ const player = {
       this.pending = [];
       this.idx = msg.idx || 0;
       this.count = msg.count || 1;
+      this.score = msg.score || 0;
       thump(420, 0.08);
       this.showWait();
       keepAwake();
@@ -781,6 +845,7 @@ const player = {
 
   renderWaitFoot() {
     $('waitFoot').textContent = 'Room ' + this.code + ' · ' + this.count + ' player' + (this.count === 1 ? '' : 's') +
+      (this.score > 0 ? ' · ' + this.score + ' pt' + (this.score === 1 ? '' : 's') : '') +
       (this.via ? ' · via ' + this.via : '');
   },
 
@@ -822,6 +887,7 @@ const player = {
       this.showWait();
     } else if (msg.type === 'room') {
       this.count = msg.count;
+      if (msg.scores && this.pid in msg.scores) this.score = msg.scores[this.pid];
       this.renderWaitFoot();
     } else if (msg.type === 'standings' && this.buzzed) {
       const idx = msg.order.findIndex(o => o.pid === this.pid);
@@ -917,6 +983,11 @@ $('joinBtn').onclick = () => {
 $('armBtn').onclick = () => host.arm();
 $('againBtn').onclick = () => host.again();
 $('endBtn').onclick = () => host.end();
+$('clearPtsBtn').onclick = () => host.clearPoints();
+$('lbList').addEventListener('click', e => {
+  const row = e.target.closest('.lb-row');
+  if (row) host.award(row.dataset.pid);
+});
 $('view-armed').addEventListener('pointerdown', () => player.buzz());
 
 // Tell the room when this device leaves the page gracefully.
