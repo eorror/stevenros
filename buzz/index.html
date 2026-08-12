@@ -168,6 +168,10 @@
     width: 62px; height: 62px; border-radius: 16px; display: flex; align-items: center; justify-content: center;
     font-family: 'Archivo Black', sans-serif; font-size: 30px; color: var(--ink); flex: none;
   }
+  .lb-av {
+    width: 44px; height: 44px; flex: none; display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 18px; color: var(--ink); overflow: hidden;
+  }
   .lb-name { flex: 1; font-family: 'Archivo Black', sans-serif; font-size: 34px; color: #fff; letter-spacing: -.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .lb-ms { font-family: ui-monospace, Menlo, monospace; font-size: 24px; font-weight: 600; color: rgba(255,255,255,.6); }
   .lb-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: rgba(255,255,255,.5); }
@@ -220,11 +224,18 @@
 
   /* ── player waiting ── */
   #view-wait { padding: 100px 26px 46px; flex-direction: column; align-items: center; justify-content: center; gap: 28px; text-align: center; }
+  .wait-avatar-wrap { position: relative; animation: bob 2.6s ease-in-out infinite; cursor: pointer; }
   .wait-avatar {
     width: 118px; height: 118px; background: var(--yellow); border-radius: 38% 62% 55% 45%;
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Archivo Black', sans-serif; font-size: 52px; color: var(--ink); animation: bob 2.6s ease-in-out infinite;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+    font-family: 'Archivo Black', sans-serif; font-size: 52px; color: var(--ink);
   }
+  .cam-badge {
+    position: absolute; right: -8px; bottom: -8px; width: 40px; height: 40px; border-radius: 50%;
+    background: var(--yellow); border: 3px solid var(--ink); display: flex; align-items: center;
+    justify-content: center; font-size: 18px; pointer-events: none;
+  }
+  .wait-hint { font-size: 14px; font-weight: 600; color: var(--muted); margin-top: 12px; }
   .wait-title { font-size: 44px; line-height: .95; letter-spacing: -.035em; }
   .wait-status { margin-top: 14px; font-size: 19px; font-weight: 500; color: var(--muted); animation: blink 2s ease-in-out infinite; }
   .wait-status.still { animation: none; }
@@ -372,12 +383,17 @@
 
 <!-- PLAYER WAITING -->
 <section id="view-wait">
-  <div class="wait-avatar" id="waitAvatar">S</div>
+  <div class="wait-avatar-wrap" id="waitAvatarWrap">
+    <div class="wait-avatar" id="waitAvatar">S</div>
+    <div class="cam-badge">📷</div>
+  </div>
   <div>
     <div class="black wait-title" id="waitTitle">You're in.</div>
     <div class="wait-status" id="waitStatus">Waiting for the host to start…</div>
+    <div class="wait-hint">Tap your avatar to use a photo.</div>
   </div>
   <div class="wait-foot" id="waitFoot"></div>
+  <input type="file" id="avatarInput" accept="image/*" style="display:none">
 </section>
 
 <!-- PLAYER COUNTDOWN -->
@@ -440,9 +456,43 @@ function showView(id) {
 
 function randomId() { return Math.random().toString(36).slice(2, 10); }
 function ordinal(n) { const s = ['th','st','nd','rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
-function avatarStyle(el, idx) {
-  el.style.background = PALETTE[idx % PALETTE.length];
+function setAvatarEl(el, idx, photo, initial) {
   el.style.borderRadius = SHAPES[idx % SHAPES.length];
+  if (photo) {
+    el.style.background = 'url(' + photo + ') center/cover no-repeat';
+    el.textContent = '';
+  } else {
+    el.style.background = PALETTE[idx % PALETTE.length];
+    el.textContent = (initial || '?').toUpperCase();
+  }
+}
+
+// Center-crop to a small square JPEG data URL, small enough for the brokers.
+async function processPhoto(file) {
+  const size = 112;
+  let img;
+  try {
+    img = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  } catch (e) {
+    img = await new Promise((res, rej) => {
+      const i = new Image();
+      i.onload = () => res(i);
+      i.onerror = rej;
+      i.src = URL.createObjectURL(file);
+    });
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const w = img.width, h = img.height, s = Math.min(w, h);
+  ctx.drawImage(img, (w - s) / 2, (h - s) / 2, s, s, 0, 0, size, size);
+  let q = 0.72;
+  let url = canvas.toDataURL('image/jpeg', q);
+  while (url.length > 32000 && q > 0.3) {
+    q -= 0.15;
+    url = canvas.toDataURL('image/jpeg', q);
+  }
+  return url;
 }
 
 function connectOne(url, will) {
@@ -554,7 +604,8 @@ const host = {
       const existing = this.players.get(pid);
       const idx = existing ? existing.idx : this.nextIdx++;
       const score = existing ? existing.score : 0;
-      this.players.set(pid, { name: String(msg.name).slice(0, 16), idx, score });
+      const photo = existing ? existing.photo : null;
+      this.players.set(pid, { name: String(msg.name).slice(0, 16), idx, score, photo });
       this.send(pid, { type: 'joined', idx, phase: this.phase, code: this.code, count: this.players.size, score });
       this.renderPlayers();
       this.broadcastRoom();
@@ -565,6 +616,12 @@ const host = {
         this.broadcastRoom();
         this.checkAllIn(); // a leaver shouldn't keep the clock running
       }
+    } else if (msg.type === 'avatar') {
+      const p = this.players.get(pid);
+      if (!p || typeof msg.img !== 'string' || !msg.img.startsWith('data:image/') || msg.img.length > 80000) return;
+      p.photo = msg.img;
+      this.renderPlayers();
+      this.renderBuzzes(false);
     } else if (msg.type === 'buzz' && this.phase === 'armed') {
       const p = this.players.get(pid);
       if (!p || this.buzzes.some(b => b.pid === pid)) return; // one buzz per round
@@ -688,13 +745,12 @@ const host = {
     if (this.players.size === 0) {
       chips.innerHTML = '<div class="empty-room">Waiting for thumbs…</div>';
     } else {
-      this.players.forEach(({ name, idx, score }) => {
+      this.players.forEach(({ name, idx, score, photo }) => {
         const chip = document.createElement('div');
         chip.className = 'chip';
         const av = document.createElement('div');
         av.className = 'avatar';
-        avatarStyle(av, idx);
-        av.textContent = (name[0] || '?').toUpperCase();
+        setAvatarEl(av, idx, photo, name[0]);
         const nm = document.createElement('span');
         nm.textContent = name;
         chip.append(av, nm);
@@ -726,12 +782,17 @@ const host = {
       return `
       <li class="lb-row${animate ? ' anim' : ''}" data-pid="${b.pid}">
         <div class="lb-badge" style="background:${badge(i)}">${i + 1}</div>
+        <div class="lb-av"></div>
         <div class="lb-name"></div>
         ${pts}
         <div class="lb-ms">${Math.round(b.elapsed)} ms</div>
       </li>`;
     }).join('');
     list.querySelectorAll('.lb-name').forEach((el, i) => el.textContent = this.buzzes[i].name);
+    list.querySelectorAll('.lb-av').forEach((el, i) => {
+      const p = this.players.get(this.buzzes[i].pid);
+      setAvatarEl(el, p ? p.idx : 0, p ? p.photo : null, this.buzzes[i].name[0]);
+    });
   },
 };
 
@@ -747,6 +808,7 @@ const player = {
   idx: 0,
   count: 0,
   score: 0,
+  photo: null,
   via: '',
   joined: false,
   armedAt: null,
@@ -845,9 +907,7 @@ const player = {
   },
 
   showWait(statusText, still) {
-    const av = $('waitAvatar');
-    avatarStyle(av, this.idx);
-    av.textContent = (this.name[0] || '?').toUpperCase();
+    setAvatarEl($('waitAvatar'), this.idx, this.photo, this.name[0]);
     $('waitTitle').innerHTML = 'You\'re in,<br>' + this.name.replace(/</g, '&lt;') + '.';
     const st = $('waitStatus');
     st.textContent = statusText || 'Waiting for the host to start…';
@@ -938,9 +998,7 @@ const player = {
     void big.offsetWidth; // restart popIn
     big.style.animation = '';
     $('resWord').textContent = place === null ? '' : (place === 1 ? 'FIRST!' : ordinal(place));
-    const av = $('resAvatar');
-    avatarStyle(av, this.idx);
-    av.textContent = (this.name[0] || '?').toUpperCase();
+    setAvatarEl($('resAvatar'), this.idx, this.photo, this.name[0]);
     $('resName').textContent = this.name;
     $('resMs').textContent = Math.round(ms) + ' ms';
     $('resFoot').textContent = place === null ? '' :
@@ -1002,6 +1060,21 @@ $('lbList').addEventListener('click', e => {
   if (row) host.award(row.dataset.pid);
 });
 $('view-armed').addEventListener('pointerdown', () => player.buzz());
+$('waitAvatarWrap').onclick = () => $('avatarInput').click();
+$('avatarInput').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  e.target.value = ''; // allow re-picking the same file
+  if (!file) return;
+  try {
+    const url = await processPhoto(file);
+    player.photo = url;
+    setAvatarEl($('waitAvatar'), player.idx, url, player.name[0]);
+    player.send({ type: 'avatar', img: url });
+    thump(600, 0.08);
+  } catch (err) {
+    $('waitStatus').textContent = 'Couldn’t read that photo — try another.';
+  }
+});
 
 // Tell the room when this device leaves the page gracefully.
 window.addEventListener('pagehide', () => {
