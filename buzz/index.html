@@ -104,20 +104,22 @@
   .room-head { display: flex; align-items: baseline; justify-content: space-between; }
   .room-head .title { font-size: 30px; color: #fff; letter-spacing: -.02em; }
   .room-head .count { font-size: 16px; font-weight: 700; color: var(--yellow); }
-  .chips { display: flex; flex-wrap: wrap; gap: 10px; align-content: flex-start; flex: 1; }
-  .chip {
-    display: flex; align-items: center; gap: 11px; background: rgba(255,255,255,.08);
-    border-radius: 999px; padding: 8px 18px 8px 8px; animation: popIn .35s ease-out both;
-  }
+  .chips { display: flex; flex-wrap: wrap; gap: 18px; align-content: flex-start; flex: 1; overflow-y: auto; }
   .avatar {
-    width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;
-    font-weight: 900; font-size: 20px; color: var(--ink); flex: none; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; color: var(--ink); flex: none; overflow: hidden;
   }
-  .chip span { color: #fff; font-weight: 600; font-size: 16px; }
-  .chip .pts {
-    background: var(--yellow); color: var(--ink); border-radius: 999px;
-    min-width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 900; padding: 0 7px;
+  .ptile { position: relative; display: flex; flex-direction: column; align-items: center; gap: 9px; animation: popIn .35s ease-out both; }
+  .ptile:nth-child(4n+1) { transform: rotate(-2deg); }
+  .ptile:nth-child(4n+2) { transform: rotate(1.5deg); }
+  .ptile:nth-child(4n+3) { transform: rotate(-1deg); }
+  .ptile:nth-child(4n+4) { transform: rotate(2deg); }
+  .ptile .avatar { width: 112px; height: 112px; border-radius: 18px; font-size: 46px; font-family: 'Archivo Black', sans-serif; font-weight: 400; }
+  .ptile .nm { color: #fff; font-weight: 700; font-size: 15px; max-width: 116px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ptile .pts {
+    position: absolute; top: -10px; right: -10px; min-width: 32px; height: 32px;
+    background: var(--yellow); color: var(--ink); border-radius: 999px; border: 3px solid var(--ink);
+    display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 900; padding: 0 8px;
   }
   .empty-room { color: rgba(255,255,255,.45); font-size: 17px; font-weight: 500; animation: blink 1.8s ease-in-out infinite; }
   .clear-pts {
@@ -132,6 +134,8 @@
     background: var(--red); color: #fff; transition: background .15s, color .15s;
   }
   .start-btn:disabled { background: rgba(255,255,255,.14); color: rgba(255,255,255,.4); cursor: default; }
+  .start-btn.alt { background: var(--yellow); color: var(--ink); font-size: 18px; padding: 16px; margin-top: -8px; }
+  .start-btn.alt:disabled { background: rgba(255,255,255,.14); color: rgba(255,255,255,.4); }
   @media (max-width: 899px) {
     #view-host-lobby.active { grid-template-columns: 1fr; }
     .lobby-left { padding: 46px 26px 34px; }
@@ -169,8 +173,8 @@
     font-family: 'Archivo Black', sans-serif; font-size: 30px; color: var(--ink); flex: none;
   }
   .lb-av {
-    width: 62px; height: 62px; flex: none; display: flex; align-items: center; justify-content: center;
-    font-weight: 900; font-size: 24px; color: var(--ink); overflow: hidden;
+    width: 72px; height: 72px; border-radius: 14px; flex: none; display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 28px; color: var(--ink); overflow: hidden;
   }
   .lb-name { flex: 1; font-family: 'Archivo Black', sans-serif; font-size: 34px; color: #fff; letter-spacing: -.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .lb-ms { font-family: ui-monospace, Menlo, monospace; font-size: 24px; font-weight: 600; color: rgba(255,255,255,.6); }
@@ -192,7 +196,9 @@
     .clock b { font-size: 40px; }
     .lb-row { gap: 14px; padding: 12px 16px; }
     .lb-badge { width: 48px; height: 48px; font-size: 24px; border-radius: 12px; }
-    .lb-av { width: 48px; height: 48px; font-size: 20px; }
+    .lb-av { width: 54px; height: 54px; font-size: 22px; border-radius: 11px; }
+    .ptile .avatar { width: 92px; height: 92px; font-size: 38px; }
+    .ptile .nm { max-width: 96px; }
     .lb-name { font-size: 24px; }
     .lb-ms { font-size: 18px; }
   }
@@ -227,9 +233,9 @@
   #view-wait { padding: 100px 26px 46px; flex-direction: column; align-items: center; justify-content: center; gap: 28px; text-align: center; }
   .wait-avatar-wrap { position: relative; animation: bob 2.6s ease-in-out infinite; cursor: pointer; }
   .wait-avatar {
-    width: 118px; height: 118px; background: var(--yellow); border-radius: 38% 62% 55% 45%;
+    width: 150px; height: 150px; background: var(--yellow); border-radius: 26px;
     display: flex; align-items: center; justify-content: center; overflow: hidden;
-    font-family: 'Archivo Black', sans-serif; font-size: 52px; color: var(--ink);
+    font-family: 'Archivo Black', sans-serif; font-size: 62px; color: var(--ink);
   }
   .cam-badge {
     position: absolute; right: -8px; bottom: -8px; width: 40px; height: 40px; border-radius: 50%;
@@ -280,7 +286,7 @@
   .res-place { position: relative; font-family: 'Archivo Black', sans-serif; font-size: 172px; line-height: .82; letter-spacing: -.06em; animation: popIn .4s ease-out both; }
   .res-word { position: relative; font-family: 'Archivo Black', sans-serif; font-size: 40px; letter-spacing: -.03em; }
   .res-pill { position: relative; margin-top: 18px; display: flex; align-items: center; gap: 12px; background: rgba(0,0,0,.12); border-radius: 999px; padding: 10px 20px; }
-  .res-pill .avatar { width: 44px; height: 44px; font-size: 18px; }
+  .res-pill .avatar { width: 44px; height: 44px; font-size: 18px; border-radius: 10px; }
   .res-pill .nm { font-weight: 800; font-size: 20px; }
   .res-pill .ms { font-family: ui-monospace, Menlo, monospace; font-weight: 600; font-size: 18px; opacity: .75; }
   .res-foot { position: absolute; bottom: 46px; left: 26px; right: 26px; font-size: 16px; font-weight: 600; opacity: .7; }
@@ -354,6 +360,7 @@
     </div>
     <button class="clear-pts" id="clearPtsBtn" style="display:none">Clear points</button>
     <button class="start-btn" id="armBtn" disabled>Start round</button>
+    <button class="start-btn alt" id="contBtn" disabled>Go continuous — no countdown</button>
   </div>
 </section>
 
@@ -458,7 +465,6 @@ function showView(id) {
 function randomId() { return Math.random().toString(36).slice(2, 10); }
 function ordinal(n) { const s = ['th','st','nd','rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
 function setAvatarEl(el, idx, photo, initial) {
-  el.style.borderRadius = SHAPES[idx % SHAPES.length];
   if (photo) {
     el.style.background = 'url(' + photo + ') center/cover no-repeat';
     el.textContent = '';
@@ -547,7 +553,8 @@ const host = {
   players: new Map(),  // pid -> { name, idx }
   nextIdx: 0,
   buzzes: [],          // { pid, name, elapsed }
-  phase: 'lobby',      // lobby | armed
+  phase: 'lobby',      // lobby | countdown | armed
+  mode: 'rounds',      // rounds | continuous
   round: 0,
   clockTimer: null,
   armedAtLocal: 0,
@@ -608,6 +615,12 @@ const host = {
       const photo = existing ? existing.photo : null;
       this.players.set(pid, { name: String(msg.name).slice(0, 16), idx, score, photo });
       this.send(pid, { type: 'joined', idx, phase: this.phase, code: this.code, count: this.players.size, score });
+      // In continuous mode, late joiners get armed right away instead of
+      // waiting for the next clear.
+      if (this.mode === 'continuous' && this.phase === 'armed') {
+        this.armedPids.add(pid);
+        this.send(pid, { type: 'armed' });
+      }
       this.renderPlayers();
       this.broadcastRoom();
     } else if (msg.type === 'leave') {
@@ -656,8 +669,14 @@ const host = {
     const allIn = [...this.armedPids].every(pid => this.buzzes.some(b => b.pid === pid));
     if (allIn) {
       clearInterval(this.clockTimer);
-      $('roundTitle').textContent = 'Round ' + this.round + ' — everyone\'s in';
+      $('roundTitle').textContent = this.liveTitle('everyone\'s in');
     }
+  },
+
+  clearAndRearm() {
+    this.buzzes = [];
+    this.renderBuzzes();
+    this.goLive(); // re-arms everyone instantly, no countdown
   },
 
   award(pid) {
@@ -678,10 +697,31 @@ const host = {
     this.broadcastRoom();
   },
 
+  liveTitle(suffix) {
+    return (this.mode === 'continuous' ? 'Continuous' : 'Round ' + this.round) + ' — ' + suffix;
+  },
+
+  setLiveButtons() {
+    $('againBtn').textContent = this.mode === 'continuous' ? 'Clear — next question' : 'Clear & go again';
+    $('endBtn').textContent = this.mode === 'continuous' ? 'Back to lobby' : 'End game';
+  },
+
+  startContinuous() {
+    this.mode = 'continuous';
+    this.buzzes = [];
+    this.setLiveButtons();
+    $('roundTitle').textContent = this.liveTitle('buzzers live');
+    this.renderBuzzes();
+    showView('view-host-live');
+    this.goLive();
+  },
+
   arm() {
+    this.mode = 'rounds';
     this.phase = 'countdown';
     this.buzzes = [];
     this.round++;
+    this.setLiveButtons();
     this.broadcast({ type: 'countdown' });
     $('roundTitle').textContent = 'Round ' + this.round + ' — get ready…';
     $('clock').textContent = '0.0';
@@ -714,7 +754,7 @@ const host = {
     this.phase = 'armed';
     this.armedPids = new Set(this.players.keys()); // who can buzz this round
     this.broadcast({ type: 'armed' });
-    $('roundTitle').textContent = 'Round ' + this.round + ' — buzzers live';
+    $('roundTitle').textContent = this.liveTitle('buzzers live');
     thump(880, 0.1);
     this.armedAtLocal = performance.now();
     clearInterval(this.clockTimer);
@@ -725,6 +765,7 @@ const host = {
 
   again() {
     this.phase = 'lobby';
+    this.mode = 'rounds';
     this.buzzes = [];
     clearInterval(this.clockTimer);
     clearInterval(this.countTimer);
@@ -747,25 +788,27 @@ const host = {
       chips.innerHTML = '<div class="empty-room">Waiting for thumbs…</div>';
     } else {
       this.players.forEach(({ name, idx, score, photo }) => {
-        const chip = document.createElement('div');
-        chip.className = 'chip';
+        const tile = document.createElement('div');
+        tile.className = 'ptile';
         const av = document.createElement('div');
         av.className = 'avatar';
         setAvatarEl(av, idx, photo, name[0]);
-        const nm = document.createElement('span');
+        const nm = document.createElement('div');
+        nm.className = 'nm';
         nm.textContent = name;
-        chip.append(av, nm);
+        tile.append(av, nm);
         if (score > 0) {
           const pts = document.createElement('div');
           pts.className = 'pts';
           pts.textContent = score;
-          chip.appendChild(pts);
+          tile.appendChild(pts);
         }
-        chips.appendChild(chip);
+        chips.appendChild(tile);
       });
     }
     $('roomCount').textContent = this.players.size + ' / ' + MAX_PLAYERS;
     $('armBtn').disabled = this.players.size === 0;
+    $('contBtn').disabled = this.players.size === 0;
     let anyPoints = false;
     this.players.forEach(p => { if (p.score > 0) anyPoints = true; });
     $('clearPtsBtn').style.display = anyPoints ? 'block' : 'none';
@@ -1053,8 +1096,9 @@ $('joinBtn').onclick = () => {
   player.join(code, name);
 };
 $('armBtn').onclick = () => host.arm();
-$('againBtn').onclick = () => host.again();
-$('endBtn').onclick = () => host.end();
+$('contBtn').onclick = () => host.startContinuous();
+$('againBtn').onclick = () => host.mode === 'continuous' ? host.clearAndRearm() : host.again();
+$('endBtn').onclick = () => host.mode === 'continuous' ? host.again() : host.end();
 $('clearPtsBtn').onclick = () => host.clearPoints();
 $('lbList').addEventListener('click', e => {
   const row = e.target.closest('.lb-row');
