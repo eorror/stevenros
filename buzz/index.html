@@ -440,11 +440,10 @@
       <h2 id="contTitle">Continuous — buzzers live</h2>
     </div>
   </div>
-  <div class="live-hint">Tap a team to give them a point. Buzzes clear on their own.</div>
+  <div class="live-hint">Tap a team to give them a point. Everything clears and re-arms on its own.</div>
   <div class="cont-grid" id="contGrid"></div>
   <div class="live-foot">
-    <button class="again-btn" id="contClearBtn">Clear now</button>
-    <button class="end-btn" id="contBackBtn">Back to lobby</button>
+    <button class="end-btn" id="contBackBtn" style="flex:1">Back to lobby</button>
   </div>
 </section>
 
@@ -1189,7 +1188,6 @@ $('armBtn').onclick = () => host.arm();
 $('contBtn').onclick = () => host.startContinuous();
 $('againBtn').onclick = () => host.again();
 $('endBtn').onclick = () => host.end();
-$('contClearBtn').onclick = () => host.clearAndRearm();
 $('contBackBtn').onclick = () => host.again();
 $('contGrid').addEventListener('click', e => {
   const tile = e.target.closest('.cont-tile');
