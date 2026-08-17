@@ -116,10 +116,38 @@
   .ptile:nth-child(4n+4) { transform: rotate(2deg); }
   .ptile .avatar { width: 112px; height: 112px; border-radius: 18px; font-size: 46px; font-family: 'Archivo Black', sans-serif; font-weight: 400; }
   .ptile .nm { color: #fff; font-weight: 700; font-size: 15px; max-width: 116px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ptile .pts {
+  .ptile .pts, .cont-tile .pts {
     position: absolute; top: -10px; right: -10px; min-width: 32px; height: 32px;
     background: var(--yellow); color: var(--ink); border-radius: 999px; border: 3px solid var(--ink);
-    display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 900; padding: 0 8px;
+    display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 900;
+    padding: 0 8px; z-index: 2;
+  }
+
+  /* ── continuous mode: all teams on screen ── */
+  #view-host-cont { background: var(--ink); padding: 38px 46px; flex-direction: column; gap: 22px; }
+  .cont-grid { flex: 1; display: flex; flex-wrap: wrap; gap: 34px 30px; align-content: center; justify-content: center; }
+  .cont-tile {
+    position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px;
+    transition: opacity .25s, transform .25s; cursor: pointer; user-select: none; -webkit-user-select: none;
+  }
+  .cont-tile .avatar {
+    width: 160px; height: 160px; border-radius: 22px; font-size: 64px;
+    font-family: 'Archivo Black', sans-serif; font-weight: 400; transition: box-shadow .2s;
+  }
+  .cont-tile .nm { color: #fff; font-weight: 700; font-size: 18px; max-width: 164px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cont-tile .tms { font-family: ui-monospace, Menlo, monospace; font-size: 14px; font-weight: 600; color: var(--yellow); min-height: 1.2em; }
+  .cont-tile.lit { transform: scale(1.07); }
+  .cont-tile.lit .avatar { box-shadow: 0 0 0 5px var(--yellow), 0 0 70px rgba(255,214,41,.55); }
+  .cont-tile.dim { opacity: .3; }
+  .cont-place {
+    position: absolute; top: -14px; left: -14px; width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; font-family: 'Archivo Black', sans-serif;
+    font-size: 22px; color: var(--ink); z-index: 2; animation: popIn .3s ease-out both;
+  }
+  @media (max-width: 899px) {
+    #view-host-cont { padding: 30px 20px; }
+    .cont-tile .avatar { width: 116px; height: 116px; font-size: 46px; }
+    .cont-tile .nm { max-width: 120px; font-size: 15px; }
   }
   .empty-room { color: rgba(255,255,255,.45); font-size: 17px; font-weight: 500; animation: blink 1.8s ease-in-out infinite; }
   .clear-pts {
@@ -404,6 +432,22 @@
   <input type="file" id="avatarInput" accept="image/*" style="display:none">
 </section>
 
+<!-- HOST CONTINUOUS -->
+<section id="view-host-cont">
+  <div class="live-head">
+    <div class="live-title">
+      <div class="live-dot"></div>
+      <h2 id="contTitle">Continuous — buzzers live</h2>
+    </div>
+  </div>
+  <div class="live-hint">Tap a team to give them a point. Buzzes clear on their own.</div>
+  <div class="cont-grid" id="contGrid"></div>
+  <div class="live-foot">
+    <button class="again-btn" id="contClearBtn">Clear now</button>
+    <button class="end-btn" id="contBackBtn">Back to lobby</button>
+  </div>
+</section>
+
 <!-- PLAYER COUNTDOWN -->
 <section id="view-count">
   <div class="count-kicker">GET READY</div>
@@ -635,16 +679,23 @@ const host = {
       if (!p || typeof msg.img !== 'string' || !msg.img.startsWith('data:image/') || msg.img.length > 80000) return;
       p.photo = msg.img;
       this.renderPlayers();
-      this.renderBuzzes(false);
+      if (this.mode === 'continuous') this.renderCont();
+      else this.renderBuzzes(false);
     } else if (msg.type === 'buzz' && this.phase === 'armed') {
       const p = this.players.get(pid);
       if (!p || this.buzzes.some(b => b.pid === pid)) return; // one buzz per round
       this.buzzes.push({ pid, name: p.name, elapsed: msg.elapsed });
       this.buzzes.sort((a, b) => a.elapsed - b.elapsed);
       thump(this.buzzes.length === 1 ? 880 : 520, 0.12);
-      this.renderBuzzes();
       this.broadcast({ type: 'standings', order: this.buzzes.map(b => ({ pid: b.pid, name: b.name, elapsed: b.elapsed })) });
-      this.checkAllIn();
+      if (this.mode === 'continuous') {
+        this.renderCont();
+        // Resolve window: 5s after the first buzz, clear and re-arm.
+        if (this.buzzes.length === 1) this.resolveTimer = setTimeout(() => this.clearAndRearm(), 5000);
+      } else {
+        this.renderBuzzes();
+        this.checkAllIn();
+      }
     }
   },
 
@@ -665,18 +716,59 @@ const host = {
   },
 
   checkAllIn() {
+    if (this.mode === 'continuous') return; // the resolve window handles it
     if (this.phase !== 'armed' || !this.armedPids || this.armedPids.size === 0) return;
     const allIn = [...this.armedPids].every(pid => this.buzzes.some(b => b.pid === pid));
     if (allIn) {
       clearInterval(this.clockTimer);
-      $('roundTitle').textContent = this.liveTitle('everyone\'s in');
+      $('roundTitle').textContent = 'Round ' + this.round + ' — everyone\'s in';
     }
   },
 
   clearAndRearm() {
+    clearTimeout(this.resolveTimer);
     this.buzzes = [];
-    this.renderBuzzes();
+    if (this.mode === 'continuous') this.renderCont();
+    else this.renderBuzzes();
     this.goLive(); // re-arms everyone instantly, no countdown
+  },
+
+  renderCont() {
+    const grid = $('contGrid');
+    grid.innerHTML = '';
+    const anyBuzz = this.buzzes.length > 0;
+    const badgeBg = i => i === 0 ? 'var(--yellow)' : i === 1 ? 'var(--pink)' : i === 2 ? 'var(--green)' : 'rgba(255,255,255,.6)';
+    this.players.forEach((p, pid) => {
+      const bi = this.buzzes.findIndex(b => b.pid === pid);
+      const tile = document.createElement('div');
+      tile.className = 'cont-tile' + (bi >= 0 ? ' lit' : anyBuzz ? ' dim' : '');
+      tile.style.order = bi >= 0 ? bi : 50 + p.idx;
+      tile.dataset.pid = pid;
+      const av = document.createElement('div');
+      av.className = 'avatar';
+      setAvatarEl(av, p.idx, p.photo, p.name[0]);
+      const nm = document.createElement('div');
+      nm.className = 'nm';
+      nm.textContent = p.name;
+      const tms = document.createElement('div');
+      tms.className = 'tms';
+      tms.textContent = bi >= 0 ? Math.round(this.buzzes[bi].elapsed) + ' ms' : '';
+      tile.append(av, nm, tms);
+      if (bi >= 0) {
+        const place = document.createElement('div');
+        place.className = 'cont-place';
+        place.style.background = badgeBg(bi);
+        place.textContent = bi + 1;
+        tile.appendChild(place);
+      }
+      if (p.score > 0) {
+        const pts = document.createElement('div');
+        pts.className = 'pts';
+        pts.textContent = p.score;
+        tile.appendChild(pts);
+      }
+      grid.appendChild(tile);
+    });
   },
 
   award(pid) {
@@ -684,9 +776,13 @@ const host = {
     if (!p) return;
     p.score++;
     thump(700, 0.08);
-    this.renderBuzzes(false);
-    const pill = document.querySelector(`.lb-row[data-pid="${pid}"] .lb-pts`);
-    if (pill) { pill.classList.remove('bump'); void pill.offsetWidth; pill.classList.add('bump'); }
+    if (this.mode === 'continuous') {
+      this.renderCont();
+    } else {
+      this.renderBuzzes(false);
+      const pill = document.querySelector(`.lb-row[data-pid="${pid}"] .lb-pts`);
+      if (pill) { pill.classList.remove('bump'); void pill.offsetWidth; pill.classList.add('bump'); }
+    }
     this.broadcastRoom();
   },
 
@@ -697,22 +793,11 @@ const host = {
     this.broadcastRoom();
   },
 
-  liveTitle(suffix) {
-    return (this.mode === 'continuous' ? 'Continuous' : 'Round ' + this.round) + ' — ' + suffix;
-  },
-
-  setLiveButtons() {
-    $('againBtn').textContent = this.mode === 'continuous' ? 'Clear — next question' : 'Clear & go again';
-    $('endBtn').textContent = this.mode === 'continuous' ? 'Back to lobby' : 'End game';
-  },
-
   startContinuous() {
     this.mode = 'continuous';
     this.buzzes = [];
-    this.setLiveButtons();
-    $('roundTitle').textContent = this.liveTitle('buzzers live');
-    this.renderBuzzes();
-    showView('view-host-live');
+    this.renderCont();
+    showView('view-host-cont');
     this.goLive();
   },
 
@@ -721,7 +806,6 @@ const host = {
     this.phase = 'countdown';
     this.buzzes = [];
     this.round++;
-    this.setLiveButtons();
     this.broadcast({ type: 'countdown' });
     $('roundTitle').textContent = 'Round ' + this.round + ' — get ready…';
     $('clock').textContent = '0.0';
@@ -754,8 +838,12 @@ const host = {
     this.phase = 'armed';
     this.armedPids = new Set(this.players.keys()); // who can buzz this round
     this.broadcast({ type: 'armed' });
-    $('roundTitle').textContent = this.liveTitle('buzzers live');
     thump(880, 0.1);
+    if (this.mode === 'continuous') {
+      $('contTitle').textContent = 'Continuous — buzzers live';
+      return; // no clock in continuous mode
+    }
+    $('roundTitle').textContent = 'Round ' + this.round + ' — buzzers live';
     this.armedAtLocal = performance.now();
     clearInterval(this.clockTimer);
     this.clockTimer = setInterval(() => {
@@ -769,6 +857,7 @@ const host = {
     this.buzzes = [];
     clearInterval(this.clockTimer);
     clearInterval(this.countTimer);
+    clearTimeout(this.resolveTimer);
     $('countOverlay').style.display = 'none';
     this.broadcast({ type: 'reset' });
     this.renderPlayers();
@@ -809,6 +898,7 @@ const host = {
     $('roomCount').textContent = this.players.size + ' / ' + MAX_PLAYERS;
     $('armBtn').disabled = this.players.size === 0;
     $('contBtn').disabled = this.players.size === 0;
+    if (this.mode === 'continuous') this.renderCont(); // keep the team grid in sync on join/leave
     let anyPoints = false;
     this.players.forEach(p => { if (p.score > 0) anyPoints = true; });
     $('clearPtsBtn').style.display = anyPoints ? 'block' : 'none';
@@ -1097,8 +1187,14 @@ $('joinBtn').onclick = () => {
 };
 $('armBtn').onclick = () => host.arm();
 $('contBtn').onclick = () => host.startContinuous();
-$('againBtn').onclick = () => host.mode === 'continuous' ? host.clearAndRearm() : host.again();
-$('endBtn').onclick = () => host.mode === 'continuous' ? host.again() : host.end();
+$('againBtn').onclick = () => host.again();
+$('endBtn').onclick = () => host.end();
+$('contClearBtn').onclick = () => host.clearAndRearm();
+$('contBackBtn').onclick = () => host.again();
+$('contGrid').addEventListener('click', e => {
+  const tile = e.target.closest('.cont-tile');
+  if (tile) host.award(tile.dataset.pid);
+});
 $('clearPtsBtn').onclick = () => host.clearPoints();
 $('lbList').addEventListener('click', e => {
   const row = e.target.closest('.lb-row');
